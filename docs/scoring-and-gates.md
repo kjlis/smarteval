@@ -78,6 +78,8 @@ Per run directory:
 - `ci.json`: optional CI-oriented status file
 - `lock.json`: config and evaluator snapshot for that bakeoff
 
+With default settings these live under `.smarteval/runs/<bakeoff>/`.
+
 The aggregate summary includes:
 
 - pass rate

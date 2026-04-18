@@ -146,11 +146,11 @@ class RouterAndLedgerTests(unittest.TestCase):
             self.assertEqual(diff_result.exit_code, 0)
             self.assertIn('"delta": 0.0', diff_result.stdout)
 
-            verdicts_path = tmp / "ledger" / "verdicts.jsonl"
+            verdicts_path = tmp / ".smarteval" / "ledger" / "verdicts.jsonl"
             self.assertTrue(verdicts_path.exists())
             verdict_payload = verdicts_path.read_text(encoding="utf-8")
             self.assertIn('"diff":{"callable":"tests.helpers:echo_expected"}', verdict_payload)
-            note_files = list((tmp / "ledger" / "notes").glob("*.md"))
+            note_files = list((tmp / ".smarteval" / "ledger" / "notes").glob("*.md"))
             self.assertEqual(len(note_files), 1)
 
             by_case_files = list((run_dir / "by_case").glob("*.jsonl"))

@@ -37,6 +37,7 @@ This repository is a Python eval framework with a CLI-first workflow. Keep chang
 - Evaluator changes should go through `smarteval rebaseline`, not `try-new-model`.
 - Verdict and proposal history belongs in `ledger/`.
 - Optimization summaries should preserve an explainable lineage from baseline through proposal rationale, changed fields, and observed score deltas.
+- Default eval artifacts should live under one per-config `.smarteval/` root, with `runs/`, `ledger/`, and `optimization-runs/` grouped together.
 
 ## Docs To Keep In Sync
 

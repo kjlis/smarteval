@@ -102,10 +102,10 @@ class OptimizationLoopTests(unittest.TestCase):
             self.assertEqual(trace["rounds"][0]["rejected_proposal_count"], 1)
             self.assertEqual(trace["rounds"][0]["rejected_proposals"][0]["duplicate_of_variant_id"], "dead-baseline")
 
-            variants_log = (tmp / "ledger" / "variants.jsonl").read_text(encoding="utf-8")
+            variants_log = (tmp / ".smarteval" / "ledger" / "variants.jsonl").read_text(encoding="utf-8")
             self.assertIn("fix callable", variants_log)
             self.assertIn("second round improvement", variants_log)
-            proposals_log = (tmp / "ledger" / "proposals.jsonl").read_text(encoding="utf-8")
+            proposals_log = (tmp / ".smarteval" / "ledger" / "proposals.jsonl").read_text(encoding="utf-8")
             self.assertIn('"status":"accepted"', proposals_log)
             self.assertIn('"status":"rejected_exact_duplicate"', proposals_log)
 

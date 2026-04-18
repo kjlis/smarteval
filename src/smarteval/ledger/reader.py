@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from smarteval.core.paths import ledger_root
+
 
 def read_jsonl(path: str | Path) -> list[dict]:
     file_path = Path(path)
@@ -16,7 +18,7 @@ def read_jsonl(path: str | Path) -> list[dict]:
 
 
 def read_ledger(project_root: str | Path) -> dict[str, list[dict]]:
-    root = Path(project_root) / "ledger"
+    root = ledger_root(project_root)
     return {
         "variants": read_jsonl(root / "variants.jsonl"),
         "proposals": read_jsonl(root / "proposals.jsonl"),

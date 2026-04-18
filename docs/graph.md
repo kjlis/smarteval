@@ -34,16 +34,16 @@ Recommended edge labels:
 
 Use these files together:
 
-- `ledger/variants.jsonl`
+- `.smarteval/ledger/variants.jsonl`
   Accepted, materialized variants with `parent_id`, `rationale`, and `diff`.
-- `ledger/proposals.jsonl`
+- `.smarteval/ledger/proposals.jsonl`
   Proposal attempts, including accepted and rejected proposals, with:
   `status`, `parent_variant_id`, `materialized_variant_id`, `duplicate_of_variant_id`,
   `similarity`, `rationale`, and `diff`. Accepted suggestions that were not materialized keep
   `materialized_variant_id: null`.
-- `runs/<bakeoff>/summary.json`
+- `.smarteval/runs/<bakeoff>/summary.json`
   Aggregate scores, deltas, failed-run counts, sample errors, and `improvement_traces`.
-- `runs/<bakeoff>/by_case/*.jsonl`
+- `.smarteval/runs/<bakeoff>/by_case/*.jsonl`
   Per-run failures and raw scorer outputs when you need case-level detail.
 - `.smarteval/optimization-runs/*.json`
   Round structure for multi-round optimization sessions, including source run, queued run, and

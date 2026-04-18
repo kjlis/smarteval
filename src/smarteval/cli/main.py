@@ -11,6 +11,7 @@ from smarteval.core.config import load_config
 from smarteval.core.model_swap import select_variants_for_model_try
 from smarteval.core.models import Verdict
 from smarteval.core.golden import load_golden_set
+from smarteval.core.paths import default_run_root
 from smarteval.core.rebaseline import rebaseline_evaluator
 from smarteval.core.rescore import rescore_bakeoff
 from smarteval.core.runner import (
@@ -240,7 +241,7 @@ def propose(
             try:
                 baseline_variant = config.get_variant(config.baseline)
                 config.variants = [baseline_variant, *materialized]
-                queued_run_dir, queued_summary = run_bakeoff(config, output_root=Path(config.project_root or Path.cwd()) / "runs")
+                queued_run_dir, queued_summary = run_bakeoff(config, output_root=default_run_root(config.project_root or Path.cwd()))
                 payload["queued_run_dir"] = str(queued_run_dir)
                 payload["queued_bakeoff_id"] = queued_summary.bakeoff_id
             finally:

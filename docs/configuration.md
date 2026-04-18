@@ -95,6 +95,7 @@ reporting:
 - Summaries are re-rendered incrementally every `N` completed runs.
 - `summary.json` now includes `improvement_traces` for non-baseline variants when lineage can be reconstructed from the config and ledger.
 - `summary.md` shows the best improvement path, including the recorded rationale, concrete changed fields, and delta vs parent / baseline.
+- When you use the default output root, runs are written under `.smarteval/runs/` next to the config so each eval config keeps its own history root.
 
 ## Gates
 

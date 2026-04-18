@@ -5,9 +5,12 @@
 ## What It Does
 
 - Runs `case × variant × iteration` bakeoffs and writes incremental results to `runs/`
+  By default these now live under `.smarteval/runs/` next to the config, so each eval keeps its
+  own history root.
 - Supports script generators, OpenAI/Codex generators, and manifest-backed external pipelines
 - Scores one primary artifact per run while retaining sibling outputs as attachments/context
 - Persists variant and verdict history in `ledger/`
+  By default this now lives under `.smarteval/ledger/` next to the config.
 - Supports `resume`, `rescore`, `propose`, `rebaseline`, and `try-new-model`
 - Defaults proposer calls to local Codex, with explicit OpenAI fallback support
 
@@ -110,4 +113,6 @@ python scripts/optimize_loop.py --path smarteval.yaml [--rounds 5] [--proposals-
 - `try-new-model` is for generator swaps only. Evaluator changes must go through `rebaseline`.
 - `rescore` reuses stored artifacts instead of rerunning generators.
 - Project-level evaluator locks live under `.smarteval/lock.json`.
+- The default per-eval data root is `.smarteval/`, with `runs/`, `ledger/`, and `optimization-runs/`
+  grouped under it for easier tracking and visualization.
 - A successful `llm_rubric` run is: golden case loaded -> generator produces artifact -> Codex scores the selected artifact.

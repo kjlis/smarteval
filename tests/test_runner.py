@@ -151,6 +151,45 @@ class RunnerTests(unittest.TestCase):
             self.assertIn("Preflight:", run_result.stdout)
             self.assertIn("Completed bakeoff", run_result.stdout)
 
+    def test_run_bakeoff_defaults_to_smarteval_runs_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            golden_path = tmp_path / "golden.jsonl"
+            golden_path.write_text(
+                '{"id":"q1","input":{"question":"2+2"},"expected":{"answer":"4"},"added_at":"2026-04-17"}\n',
+                encoding="utf-8",
+            )
+            config_path = tmp_path / "smarteval.yaml"
+            config_path.write_text(
+                textwrap.dedent(
+                    f"""
+                    version: 1
+                    golden_set: {golden_path}
+                    baseline: baseline
+                    evaluator:
+                      model: gpt-4.1
+                    variants:
+                      - id: baseline
+                        generator:
+                          kind: script
+                        params:
+                          callable: tests.helpers:echo_expected
+                    pipeline:
+                      - id: exact
+                        kind: exact_match
+                    reporting:
+                      formats: [json]
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+            run_dir, _ = run_bakeoff(config)
+
+            self.assertEqual(run_dir.parent.resolve(), (tmp_path / ".smarteval" / "runs").resolve())
+            self.assertTrue((run_dir / "summary.json").exists())
+
     def test_cli_run_supports_filters_and_dry_run(self) -> None:
         runner = CliRunner()
         with tempfile.TemporaryDirectory() as tmp_dir:

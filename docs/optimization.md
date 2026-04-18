@@ -65,12 +65,14 @@ This prevents obviously repeated dead variants from being re-queued.
 
 ## Ledger Files
 
-- `ledger/variants.jsonl`
-- `ledger/proposals.jsonl`
-- `ledger/verdicts.jsonl`
-- `ledger/notes/`
+- `.smarteval/ledger/variants.jsonl`
+- `.smarteval/ledger/proposals.jsonl`
+- `.smarteval/ledger/verdicts.jsonl`
+- `.smarteval/ledger/notes/`
 
-The ledger is the durable memory for optimization decisions.
+The ledger is the durable memory for optimization decisions. By default, optimization traces are
+written under the same per-config root at `.smarteval/optimization-runs/`, and focused bakeoffs go
+to `.smarteval/runs/`.
 
 ## `smarteval propose`
 

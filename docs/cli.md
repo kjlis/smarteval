@@ -19,6 +19,9 @@ smarteval doctor --path smarteval.yaml
 python scripts/optimize_loop.py --path smarteval.yaml [--rounds 5] [--proposals-per-round 3]
 ```
 
+Unless you override `--output-root`, bakeoff outputs now live under `.smarteval/runs/` beside the
+config. Ledger and optimization traces live under the same `.smarteval/` root.
+
 ## `run`
 
 ```bash

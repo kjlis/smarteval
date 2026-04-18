@@ -3,14 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from smarteval.core.paths import ledger_root
 from smarteval.core.models import BakeoffConfig, LedgerVariantRecord, LedgerVerdictRecord, ProposalAttemptRecord, Variant, VariantProposal, Verdict
 from smarteval.ledger.reader import read_jsonl
 from smarteval.proposer.dedup import ProposalReview
 
 
 def ensure_ledger_layout(project_root: str | Path) -> Path:
-    root = Path(project_root)
-    ledger_dir = root / "ledger"
+    ledger_dir = ledger_root(project_root)
     (ledger_dir / "notes").mkdir(parents=True, exist_ok=True)
     (ledger_dir / "proposals.jsonl").touch(exist_ok=True)
     (ledger_dir / "variants.jsonl").touch(exist_ok=True)

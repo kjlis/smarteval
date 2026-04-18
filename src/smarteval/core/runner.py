@@ -22,6 +22,7 @@ from smarteval.core.models import (
     SpecialistCandidate,
     VariantSummary,
 )
+from smarteval.core.paths import resolve_output_root
 from smarteval.core.pipeline import execute_scoring_pipeline
 from smarteval.core.router import load_router_spec, route_case
 from smarteval.core.rubric import load_rubric
@@ -44,6 +45,7 @@ def run_bakeoff(
     cases, golden_hash = load_golden_set(config.golden_set)
     cases = _filter_cases(cases, tags=case_tags, case_pattern=case_pattern)
     bakeoff_id = bakeoff_id or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+    output_root = resolve_output_root(config.project_root or Path.cwd(), output_root)
     run_dir = Path(output_root) / f"{bakeoff_id}__{bakeoff_id[:6]}"
     by_case_dir = run_dir / "by_case"
     artifacts_dir = run_dir / "artifacts"

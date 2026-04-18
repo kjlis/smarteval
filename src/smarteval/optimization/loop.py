@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from smarteval.core.config import load_config
 from smarteval.core.models import Variant, VariantProposal
+from smarteval.core.paths import optimization_runs_root
 from smarteval.core.runner import load_run_records, read_summary, run_bakeoff
 from smarteval.ledger.reader import read_ledger
 from smarteval.ledger.writer import append_materialized_proposals, append_proposal_attempts
@@ -190,7 +191,7 @@ def _baseline_variant(variants: list[Variant], baseline_id: str) -> Variant:
 
 
 def _new_trace_path(project_root: Path) -> Path:
-    trace_dir = project_root / ".smarteval" / "optimization-runs"
+    trace_dir = optimization_runs_root(project_root)
     trace_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
     return trace_dir / f"{timestamp}.json"
