@@ -12,6 +12,8 @@ def load_config(path: str | Path) -> BakeoffConfig:
     with config_path.open("r", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
     raw = _resolve_known_paths(raw, config_path.parent.resolve())
+    raw["project_root"] = str(config_path.parent.resolve())
+    raw["config_path"] = str(config_path.resolve())
     return BakeoffConfig.model_validate(raw)
 
 

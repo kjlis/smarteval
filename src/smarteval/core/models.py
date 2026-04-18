@@ -160,11 +160,81 @@ class Gates(BaseModel):
     require_baseline: bool = True
     evaluator_fingerprint_change: Literal["refuse", "warn"] = "warn"
     cross_evaluator_verification: bool = False
+    specialist_lift_threshold: float = 0.30
+    specialist_min_n: int = 10
+
+
+class RouterValidation(BaseModel):
+    run_id: str
+    lift_vs_default: float
+    scope: str
+    n_runs: int
+
+
+class RouterRule(BaseModel):
+    when: dict[str, Any]
+    variant_id: str
+    validation: RouterValidation | None = None
+
+
+class RouterSpec(BaseModel):
+    default_variant_id: str
+    rules: list[RouterRule] = Field(default_factory=list)
+    max_specialists: int = 10
+
+    @model_validator(mode="after")
+    def validate_complexity(self) -> "RouterSpec":
+        if len(self.rules) > self.max_specialists:
+            raise ValueError(
+                f"router defines {len(self.rules)} rules but max_specialists={self.max_specialists}"
+            )
+        return self
+
+
+class Verdict(BaseModel):
+    run_id: str
+    status: Literal["win", "loss", "specialist", "noisy", "pending"]
+    promotion_level: Literal["dead", "specialist", "broad_default", "pending"]
+    rationale: str
+    killed_by: Literal["human", "canonical_eval", "slice_regression", "noise"] | None = None
+    follow_up_variant_id: str | None = None
+    author: str
+    timestamp: datetime
+
+
+class LedgerVariantRecord(BaseModel):
+    id: str
+    parent_id: str | None = None
+    author: str = "framework"
+    hypothesis: str | None = None
+    diff: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+
+
+class LedgerVerdictRecord(BaseModel):
+    variant_id: str
+    run_id: str
+    status: str
+    promotion_level: str
+    rationale: str
+    killed_by: str | None = None
+    follow_up_variant_id: str | None = None
+    author: str
+    timestamp: datetime
+
+
+class VariantProposal(BaseModel):
+    parent_variant_id: str
+    rationale: str
+    diff: dict[str, Any]
+    expected_slice: str | None = None
 
 
 class RunRecord(BaseModel):
     run_id: str
     case_id: str
+    case_input: dict[str, Any] = Field(default_factory=dict)
+    case_expected: dict[str, Any] | None = None
     variant_id: str
     generator: str
     iteration: int
@@ -178,13 +248,34 @@ class RunRecord(BaseModel):
     golden_hash: str
     status: Literal["success", "failed"] = "success"
     error: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    difficulty: Literal["easy", "medium", "hard"] | None = None
+
+
+class SliceSummary(BaseModel):
+    slice_name: str
+    variant_id: str
+    run_count: int
+    mean_score: float | None = None
+    delta_vs_baseline: float | None = None
+
+
+class SpecialistCandidate(BaseModel):
+    variant_id: str
+    slice_name: str
+    lift_vs_baseline: float
+    n_runs: int
 
 
 class VariantSummary(BaseModel):
     variant_id: str
     run_count: int
     pass_rate: float
+    pass_rate_ci_low: float | None = None
+    pass_rate_ci_high: float | None = None
     mean_score: float | None = None
+    mean_score_ci_low: float | None = None
+    mean_score_ci_high: float | None = None
     mean_cost_usd: float = 0.0
     mean_duration_ms: float = 0.0
     delta_vs_baseline: float | None = None
@@ -197,7 +288,12 @@ class BakeoffSummary(BaseModel):
     golden_hash: str
     generated_at: datetime
     variants: list[VariantSummary]
+    per_slice: list[SliceSummary] = Field(default_factory=list)
+    specialists: list[SpecialistCandidate] = Field(default_factory=list)
     regressions: list[str] = Field(default_factory=list)
+    total_cost_usd: float = 0.0
+    total_duration_ms: int = 0
+    schema_version: int = 1
 
 
 class BakeoffConfig(BaseModel):
@@ -213,6 +309,8 @@ class BakeoffConfig(BaseModel):
     gates: Gates = Field(default_factory=Gates)
     router: str | None = None
     autonomy: dict[str, Any] = Field(default_factory=dict)
+    project_root: Path | None = None
+    config_path: Path | None = None
 
     @model_validator(mode="after")
     def validate_baseline_exists(self) -> "BakeoffConfig":
