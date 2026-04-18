@@ -26,7 +26,11 @@ def rescore_bakeoff(
                 setattr(stage, "rubric", str(Path(rubric_path).resolve()))
 
     rubric = _first_rubric(config)
-    evaluator_fingerprint = compute_evaluator_fingerprint(config.evaluator, rubric)
+    evaluator_fingerprint = compute_evaluator_fingerprint(
+        config.evaluator,
+        rubric,
+        backend=_first_llm_rubric_backend(config),
+    )
     for record in records:
         contract, scores = execute_scoring_pipeline(
             _case_from_record(record),
@@ -80,4 +84,11 @@ def _first_rubric(config: BakeoffConfig):
         rubric_value = getattr(stage, "rubric", None)
         if stage.kind == "llm_rubric" and rubric_value:
             return load_rubric(rubric_value)
+    return None
+
+
+def _first_llm_rubric_backend(config: BakeoffConfig) -> str | None:
+    for stage in config.pipeline:
+        if stage.kind == "llm_rubric":
+            return getattr(stage, "backend", None) or "codex_local"
     return None

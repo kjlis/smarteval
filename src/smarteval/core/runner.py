@@ -58,6 +58,7 @@ def run_bakeoff(
     evaluator_fingerprint = compute_evaluator_fingerprint(
         config.evaluator,
         _first_rubric_for_fingerprint(config),
+        backend=_first_llm_rubric_backend(config),
     )
     _check_project_lock(config, evaluator_fingerprint)
     _write_lock_file(run_dir / "lock.json", config, evaluator_fingerprint, golden_hash)
@@ -467,6 +468,13 @@ def _first_rubric_for_fingerprint(config: BakeoffConfig):
         rubric_value = getattr(stage, "rubric", None)
         if stage.kind == "llm_rubric" and rubric_value:
             return load_rubric(rubric_value)
+    return None
+
+
+def _first_llm_rubric_backend(config: BakeoffConfig) -> str | None:
+    for stage in config.pipeline:
+        if stage.kind == "llm_rubric":
+            return getattr(stage, "backend", None) or "codex_local"
     return None
 
 

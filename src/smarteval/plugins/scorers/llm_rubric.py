@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from smarteval.core.codex_client import build_codex_client
 from smarteval.core.models import Artifact, Case, ContractResult, Rubric, Score
 from smarteval.core.openai_client import build_openai_client
 from smarteval.core.rate_limit import get_bucket
@@ -17,10 +18,8 @@ class LLMRubricScorer(Scorer):
 
     def __init__(self, **settings: Any) -> None:
         super().__init__(**settings)
-        self._client = settings.get("_client") or build_openai_client(
-            api_key=settings.get("api_key"),
-            base_url=settings.get("base_url"),
-        )
+        self._backend = settings.get("backend", "codex_local")
+        self._client = settings.get("_client")
         self._rubric = _coerce_rubric(settings["rubric"])
 
     def score(
@@ -39,6 +38,26 @@ class LLMRubricScorer(Scorer):
             extra_context={"rubric_json": self._rubric_json()},
         )
 
+        payload, usage_payload = self._grade_prompt(prompt)
+        value = _normalize_rubric_score(payload, self._rubric)
+        passed = value >= (self._rubric.pass_threshold / self._rubric.scale)
+        return Score(
+            name=self.kind,
+            value=value,
+            passed=passed,
+            raw={"rubric": payload, "usage": usage_payload},
+        )
+
+    def _grade_prompt(self, prompt: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        if self._backend == "codex_local":
+            return self._grade_with_codex_local(prompt)
+        return self._grade_with_openai(prompt)
+
+    def _grade_with_openai(self, prompt: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        client = self._client or build_openai_client(
+            api_key=self.settings.get("api_key"),
+            base_url=self.settings.get("base_url"),
+        )
         response_kwargs: dict[str, Any] = {
             "model": self.settings["model"],
             "input": prompt,
@@ -52,18 +71,21 @@ class LLMRubricScorer(Scorer):
         if isinstance(rpm, int) and rpm > 0:
             get_bucket(f"evaluator:{response_kwargs['model']}", rpm).acquire()
 
-        response = self._client.responses.create(**response_kwargs)
+        response = client.responses.create(**response_kwargs)
         payload = json.loads(response.output_text)
-        value = _normalize_rubric_score(payload, self._rubric)
-        passed = value >= (self._rubric.pass_threshold / self._rubric.scale)
         usage = getattr(response, "usage", None)
         usage_payload = usage.model_dump() if hasattr(usage, "model_dump") else usage or {}
-        return Score(
-            name=self.kind,
-            value=value,
-            passed=passed,
-            raw={"rubric": payload, "usage": usage_payload},
-        )
+        return payload, usage_payload
+
+    def _grade_with_codex_local(self, prompt: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        client = self._client or build_codex_client(codex_bin=self.settings.get("codex_bin"))
+        with client as codex:
+            thread = codex.thread_start(model=self.settings["model"])
+            result = thread.run(prompt)
+        payload = json.loads(result.final_response)
+        usage = getattr(result, "usage", None)
+        usage_payload = usage.model_dump() if hasattr(usage, "model_dump") else usage or {}
+        return payload, usage_payload
 
     def _prompt_template(self) -> str:
         return (

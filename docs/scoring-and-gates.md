@@ -31,7 +31,12 @@ If a required prior stage fails, the blocked stage is recorded as skipped instea
 
 ## LLM Rubric
 
-`llm_rubric` uses the OpenAI Responses API and the evaluator policy from config.
+`llm_rubric` uses a local Codex app-server backend through the Codex Python SDK by default.
+The local Codex SDK is documented at
+https://developers.openai.com/codex/sdk#python-library .
+
+The Python SDK is not bundled with `smarteval`. Install it from a local `openai/codex`
+checkout before using `llm_rubric`.
 
 Typical stage:
 
@@ -39,6 +44,17 @@ Typical stage:
 - id: note_quality
   kind: llm_rubric
   rubric: rubrics/note_quality.yaml
+  # Optional:
+  # codex_bin: /usr/local/bin/codex
+```
+
+Using the OpenAI Responses API instead:
+
+```yaml
+- id: note_quality
+  kind: llm_rubric
+  rubric: rubrics/note_quality.yaml
+  backend: openai
 ```
 
 The scorer normalizes the rubric output into `[0, 1]`.

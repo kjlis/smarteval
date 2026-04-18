@@ -37,6 +37,39 @@ class FakeClient:
         self.responses = FakeResponsesAPI(response_text)
 
 
+class FakeCodexThread:
+    def __init__(self, response_text: str) -> None:
+        self.response_text = response_text
+        self.prompts: list[str] = []
+
+    def run(self, prompt: str):
+        self.prompts.append(prompt)
+        return FakeCodexResult(self.response_text)
+
+
+class FakeCodexResult:
+    def __init__(self, final_response: str) -> None:
+        self.final_response = final_response
+        self.usage = FakeUsage()
+
+
+class FakeCodexClient:
+    def __init__(self, response_text: str) -> None:
+        self.response_text = response_text
+        self.models: list[str] = []
+        self.thread = FakeCodexThread(response_text)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def thread_start(self, *, model: str):
+        self.models.append(model)
+        return self.thread
+
+
 class OpenAIIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         clear_buckets()
@@ -80,7 +113,7 @@ class OpenAIIntegrationTests(unittest.TestCase):
             dimensions=[RubricDimension(id="accuracy", weight=1.0, prompt="Score accuracy")],
             pass_threshold=3.5,
         )
-        scorer = LLMRubricScorer(model="gpt-4.1", rubric=rubric, _client=client)
+        scorer = LLMRubricScorer(model="gpt-4.1", rubric=rubric, backend="openai", _client=client)
         case = Case(id="q3", input={"question": "Summarize"}, added_at="2026-04-17")
         artifact = Artifact(kind="text", payload="candidate answer")
 
@@ -89,6 +122,31 @@ class OpenAIIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(score.value or 0.0, 0.8)
         self.assertTrue(score.passed)
         self.assertEqual(score.raw["usage"]["input_tokens"], 10)
+
+    def test_llm_rubric_scorer_defaults_to_local_codex_backend(self) -> None:
+        client = FakeCodexClient(
+            '{"dimensions":[{"id":"accuracy","score":5,"justification":"strong","failure_mode":null}],"overall_justification":"good"}'
+        )
+        rubric = Rubric(
+            id="demo",
+            version="1.0.0",
+            dimensions=[RubricDimension(id="accuracy", weight=1.0, prompt="Score accuracy")],
+            pass_threshold=3.5,
+        )
+        scorer = LLMRubricScorer(
+            model="gpt-5.4",
+            rubric=rubric,
+            _client=client,
+        )
+        case = Case(id="q5", input={"question": "Summarize"}, added_at="2026-04-17")
+        artifact = Artifact(kind="text", payload="candidate answer")
+
+        score = scorer.score(case, artifact, ContractResult(passed=True), [])
+
+        self.assertAlmostEqual(score.value or 0.0, 1.0)
+        self.assertTrue(score.passed)
+        self.assertEqual(client.models, ["gpt-5.4"])
+        self.assertIn("candidate answer", client.thread.prompts[0])
 
     def test_openai_generator_honors_rate_limit_bucket(self) -> None:
         import smarteval.plugins.generators.openai as openai_mod

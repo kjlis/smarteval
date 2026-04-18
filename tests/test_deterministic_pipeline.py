@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 from smarteval.core.models import Case
 from smarteval.plugins.generators.pipeline import PipelineGenerator
 from smarteval.plugins.registry import load_callable
@@ -162,6 +164,43 @@ class DeterministicPipelineTests(unittest.TestCase):
             self.assertIn("transcript_txt", artifact.attachments)
             self.assertIn("debug_json", artifact.attachments)
             self.assertEqual(artifact.metadata["pipeline_name"], "deterministic-asr-demo")
+
+    def test_yaml_boolean_toggles_do_not_fall_through_to_custom_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            case = make_case(tmp_dir)
+            generator = PipelineGenerator(
+                callable="deterministic_pipeline.fake_pipeline:run_pipeline"
+            )
+            parsed = yaml.safe_load(
+                """
+                preprocessing:
+                  denoise: off
+                  voice_enhancement: off
+                  silence_trimming: aggressive
+                  vad: strict
+                asr:
+                  model: parakeet
+                note_generation:
+                  model: gpt-5-mini
+                  prompt_style: brief
+                """
+            )
+
+            artifact = generator.generate(
+                case,
+                {
+                    "primary_output": "note_txt",
+                    "pipeline_config": parsed,
+                },
+            )
+            debug_payload = json.loads(
+                Path(artifact.source_run_dir or "").joinpath("debug.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            self.assertEqual(debug_payload["profile"], "baseline")
+            self.assertIn("audio was choppy", artifact.payload)
 
     def test_golden_config_is_materially_better_than_other_demo_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

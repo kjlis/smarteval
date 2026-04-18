@@ -126,6 +126,46 @@ class RescoreAndProposerTests(unittest.TestCase):
             self.assertNotEqual(updated.evaluator_fingerprint, initial.evaluator_fingerprint)
             self.assertEqual(updated.evaluator_fingerprint, compute_evaluator_fingerprint(config.evaluator))
 
+    def test_evaluator_fingerprint_includes_llm_rubric_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp = Path(tmp_dir)
+            golden = tmp / "golden.jsonl"
+            golden.write_text(
+                '{"id":"q1","input":{"question":"2+2"},"expected":{"answer":"4"},"added_at":"2026-04-17"}\n',
+                encoding="utf-8",
+            )
+            config_path = tmp / "smarteval.yaml"
+            config_path.write_text(
+                textwrap.dedent(
+                    f"""
+                    version: 1
+                    golden_set: {golden}
+                    baseline: baseline
+                    evaluator:
+                      model: gpt-5.4
+                    variants:
+                      - id: baseline
+                        generator:
+                          kind: script
+                        params:
+                          callable: tests.helpers:echo_expected
+                    pipeline:
+                      - id: rubric
+                        kind: llm_rubric
+                        rubric: tests/fixtures/rubrics/demo.yaml
+                    reporting:
+                      formats: [json]
+                    """
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+
+            codex_fp = compute_evaluator_fingerprint(config.evaluator, backend="codex_local")
+            openai_fp = compute_evaluator_fingerprint(config.evaluator, backend="openai")
+
+            self.assertNotEqual(codex_fp, openai_fp)
+
     def test_proposer_returns_structured_variant_proposals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp = Path(tmp_dir)

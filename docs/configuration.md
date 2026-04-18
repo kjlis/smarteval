@@ -61,6 +61,12 @@ evaluator:
 
 This policy is used by evaluator-backed scorers such as `llm_rubric`.
 
+For `llm_rubric`, the default backend is the local Codex app-server. You can optionally set
+`codex_bin` on the stage, or override the backend with `backend: openai` if you want to use
+the OpenAI Responses API instead. The default Codex path requires the experimental Codex
+Python SDK installed from a local `openai/codex` checkout as documented at
+https://developers.openai.com/codex/sdk#python-library .
+
 ## Execution
 
 ```yaml

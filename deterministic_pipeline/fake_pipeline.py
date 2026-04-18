@@ -87,9 +87,25 @@ def _merged_pipeline_config(raw_config: dict[str, Any]) -> dict[str, Any]:
 def _normalize_pipeline_config(config: dict[str, Any]) -> dict[str, Any]:
     normalized = json.loads(json.dumps(config))
     preprocessing = normalized.get("preprocessing", {})
-    if isinstance(preprocessing.get("voice_enhancement"), bool):
-        preprocessing["voice_enhancement"] = "on" if preprocessing["voice_enhancement"] else "off"
+    if "voice_enhancement" in preprocessing:
+        preprocessing["voice_enhancement"] = _normalize_toggle(preprocessing["voice_enhancement"])
+    if "denoise" in preprocessing:
+        preprocessing["denoise"] = _normalize_denoise(preprocessing["denoise"])
     return normalized
+
+
+def _normalize_toggle(value: Any) -> Any:
+    if isinstance(value, bool):
+        return "on" if value else "off"
+    return value
+
+
+def _normalize_denoise(value: Any) -> Any:
+    if not isinstance(value, bool):
+        return value
+    # YAML will parse unquoted `off` as False. Treat a boolean enable as the
+    # mild canonical preset instead of falling through to the custom profile.
+    return "mild" if value else "off"
 
 
 def _stable_config_hash(config: dict[str, Any]) -> str:

@@ -21,12 +21,18 @@ def rebaseline_evaluator(
 ) -> dict:
     config = load_config(config_path)
     original_summary = read_summary(run_dir)
-    original_fp = compute_evaluator_fingerprint(config.evaluator)
+    original_fp = compute_evaluator_fingerprint(
+        config.evaluator,
+        backend=_first_llm_rubric_backend(config),
+    )
 
     new_config = deepcopy(config)
     new_config.evaluator.model = to_model
     rescored_summary = rescore_bakeoff(new_config, run_dir=run_dir, persist=False)
-    new_fp = compute_evaluator_fingerprint(new_config.evaluator)
+    new_fp = compute_evaluator_fingerprint(
+        new_config.evaluator,
+        backend=_first_llm_rubric_backend(new_config),
+    )
 
     original_variants = {item.variant_id: item for item in original_summary.variants}
     comparison = {}
@@ -76,3 +82,10 @@ def rebaseline_evaluator(
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
+
+
+def _first_llm_rubric_backend(config) -> str | None:
+    for stage in config.pipeline:
+        if stage.kind == "llm_rubric":
+            return getattr(stage, "backend", None) or "codex_local"
+    return None
