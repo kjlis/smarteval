@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "smarteval"
 version = "0.1.0"
 description = "A Python-first framework for evaluating non-deterministic systems."
-readme = "DESIGN.md"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "jsonschema>=4.22,<5",
@@ -40,6 +40,7 @@ custom_predicate = "smarteval.plugins.contracts.custom_predicate:CustomPredicate
 [project.entry-points."smarteval.scorers"]
 exact_match = "smarteval.plugins.scorers.exact_match:ExactMatchScorer"
 regex_match = "smarteval.plugins.scorers.regex_match:RegexMatchScorer"
+embedding_sim = "smarteval.plugins.scorers.embedding_sim:EmbeddingSimScorer"
 llm_rubric = "smarteval.plugins.scorers.llm_rubric:LLMRubricScorer"
 
 [tool.setuptools]

@@ -150,6 +150,7 @@ class ReportingPolicy(BaseModel):
     slice_by: list[str] = Field(default_factory=lambda: ["tags", "difficulty"])
     diff_against_baseline: bool = True
     ci_summary: bool = False
+    incremental_summary_every_n_runs: int = 5
 
 
 class Gates(BaseModel):
@@ -207,16 +208,19 @@ class LedgerVariantRecord(BaseModel):
     parent_id: str | None = None
     author: str = "framework"
     hypothesis: str | None = None
+    rationale: str | None = None
     diff: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 
 class LedgerVerdictRecord(BaseModel):
     variant_id: str
+    parent_variant_id: str | None = None
     run_id: str
     status: str
     promotion_level: str
     rationale: str
+    diff: dict[str, Any] = Field(default_factory=dict)
     killed_by: str | None = None
     follow_up_variant_id: str | None = None
     author: str

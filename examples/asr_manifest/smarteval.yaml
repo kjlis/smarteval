@@ -1,0 +1,20 @@
+version: 1
+golden_set: golden.jsonl
+baseline: asr-note
+artifact_selection:
+  primary_output: note_txt
+  copy_attachments: true
+evaluator:
+  model: gpt-5-mini
+variants:
+  - id: asr-note
+    description: Example manifest-backed ASR pipeline variant.
+    generator:
+      kind: pipeline
+    params:
+      callable: examples.asr_manifest.pipeline_runner:run_pipeline
+pipeline:
+  - id: exact
+    kind: exact_match
+reporting:
+  formats: [markdown, json]

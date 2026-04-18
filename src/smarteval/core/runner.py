@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from fnmatch import fnmatch
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,15 +37,20 @@ def run_bakeoff(
     output_root: str | Path = "runs",
     bakeoff_id: str | None = None,
     resume: bool = False,
+    case_tags: list[str] | None = None,
+    case_pattern: str | None = None,
 ) -> tuple[Path, BakeoffSummary]:
     cases, golden_hash = load_golden_set(config.golden_set)
+    cases = _filter_cases(cases, tags=case_tags, case_pattern=case_pattern)
     bakeoff_id = bakeoff_id or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
     run_dir = Path(output_root) / f"{bakeoff_id}__{bakeoff_id[:6]}"
     by_case_dir = run_dir / "by_case"
     artifacts_dir = run_dir / "artifacts"
+    attachments_dir = run_dir / "attachments"
     logs_dir = run_dir / "logs"
     by_case_dir.mkdir(parents=True, exist_ok=True)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
+    attachments_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     append_variant_records(config)
@@ -53,11 +59,14 @@ def run_bakeoff(
         config.evaluator,
         _first_rubric_for_fingerprint(config),
     )
+    _check_project_lock(config, evaluator_fingerprint)
     _write_lock_file(run_dir / "lock.json", config, evaluator_fingerprint, golden_hash)
 
     existing = load_run_records(run_dir) if resume else {}
     run_records: list[RunRecord] = list(existing.values())
     router_spec = load_router_spec(config.router) if config.router else None
+    completed_since_summary = 0
+    summary_interval = max(1, config.reporting.incremental_summary_every_n_runs)
 
     for variant in config.variants:
         if variant.generator.kind == "router":
@@ -119,6 +128,19 @@ def run_bakeoff(
                 run_records.append(record)
                 _write_run_record(by_case_dir, record)
                 _write_artifact(artifacts_dir, case.id, variant.id, iteration, record.artifact)
+                if config.artifact_selection.copy_attachments:
+                    _write_attachments(attachments_dir, case.id, variant.id, iteration, record.artifact)
+                completed_since_summary += 1
+                if completed_since_summary % summary_interval == 0:
+                    partial = summarize_runs(
+                        run_records,
+                        baseline=config.baseline,
+                        bakeoff_id=bakeoff_id,
+                        golden_hash=golden_hash,
+                        evaluator_fingerprint=evaluator_fingerprint,
+                        gates=config.gates,
+                    )
+                    _write_summary_files(run_dir, config, partial)
 
     summary = summarize_runs(
         run_records,
@@ -375,6 +397,28 @@ def _write_artifact(artifacts_dir: Path, case_id: str, variant_id: str, iteratio
     (artifacts_dir / f"{filename}.path.txt").write_text(str(artifact.payload), encoding="utf-8")
 
 
+def _write_attachments(
+    attachments_dir: Path,
+    case_id: str,
+    variant_id: str,
+    iteration: int,
+    artifact: Artifact,
+) -> None:
+    for name, attachment in artifact.attachments.items():
+        source_path = _resolve_attachment_path(artifact, attachment.uri)
+        if source_path is None or not source_path.exists():
+            continue
+        filename = f"case-{case_id}__variant-{variant_id}__iter-{iteration}__{name}"
+        if attachment.kind == "json":
+            payload = json.loads(source_path.read_text(encoding="utf-8"))
+            (attachments_dir / f"{filename}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            continue
+        if attachment.kind == "text":
+            (attachments_dir / f"{filename}.txt").write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            continue
+        (attachments_dir / f"{filename}.path.txt").write_text(str(source_path), encoding="utf-8")
+
+
 def _write_summary_files(run_dir: Path, config: BakeoffConfig, summary: BakeoffSummary) -> None:
     if "markdown" in config.reporting.formats:
         write_summary_markdown(run_dir / "summary.md", summary)
@@ -436,3 +480,38 @@ def _run_router_variant(config: BakeoffConfig, router_spec, case, iteration: int
     artifact.metadata["routed_variant_id"] = chosen_variant_id
     artifact.metadata["router_iteration"] = iteration
     return artifact
+
+
+def _resolve_attachment_path(artifact: Artifact, uri: str) -> Path | None:
+    path = Path(uri)
+    if path.is_absolute():
+        return path
+    if artifact.source_manifest:
+        return (Path(artifact.source_manifest).parent / path).resolve()
+    if artifact.source_run_dir:
+        return (Path(artifact.source_run_dir) / path).resolve()
+    return None
+
+
+def _filter_cases(cases, *, tags: list[str] | None, case_pattern: str | None):
+    selected = list(cases)
+    if tags:
+        required = set(tags)
+        selected = [case for case in selected if required.issubset(set(case.tags))]
+    if case_pattern:
+        selected = [case for case in selected if fnmatch(case.id, case_pattern)]
+    return selected
+
+
+def _check_project_lock(config: BakeoffConfig, evaluator_fingerprint: str) -> None:
+    project_lock = Path(config.project_root or Path.cwd()) / ".smarteval" / "lock.json"
+    if not project_lock.exists():
+        return
+    payload = json.loads(project_lock.read_text(encoding="utf-8"))
+    locked_fingerprint = payload.get("new_fingerprint") or payload.get("evaluator_fingerprint")
+    if not locked_fingerprint or locked_fingerprint == evaluator_fingerprint:
+        return
+    if config.gates.evaluator_fingerprint_change == "refuse":
+        raise ValueError(
+            "evaluator fingerprint changed from the project lock; use `smarteval rebaseline` before running"
+        )

@@ -1,0 +1,17 @@
+version: 1
+golden_set: golden.jsonl
+baseline: baseline
+evaluator:
+  model: gpt-5-mini
+variants:
+  - id: baseline
+    description: Simple deterministic text baseline.
+    generator:
+      kind: script
+    params:
+      callable: examples.basic_text.generator:answer_case
+pipeline:
+  - id: exact
+    kind: exact_match
+reporting:
+  formats: [markdown, json]

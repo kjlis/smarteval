@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from smarteval.core.fingerprint import compute_evaluator_fingerprint
 from smarteval.core.models import BakeoffConfig
 from smarteval.core.pipeline import execute_scoring_pipeline
+from smarteval.core.rubric import load_rubric
 from smarteval.core.runner import load_run_records, summarize_runs
 from smarteval.reporting.json_report import write_ci_json, write_summary_json
 from smarteval.reporting.markdown import write_summary_markdown
@@ -23,6 +25,8 @@ def rescore_bakeoff(
             if stage.kind == "llm_rubric":
                 setattr(stage, "rubric", str(Path(rubric_path).resolve()))
 
+    rubric = _first_rubric(config)
+    evaluator_fingerprint = compute_evaluator_fingerprint(config.evaluator, rubric)
     for record in records:
         contract, scores = execute_scoring_pipeline(
             _case_from_record(record),
@@ -32,6 +36,7 @@ def rescore_bakeoff(
         )
         record.contract = contract
         record.scores = scores
+        record.evaluator_fingerprint = evaluator_fingerprint
         if persist:
             _rewrite_record(run_path / "by_case", record)
 
@@ -40,7 +45,7 @@ def rescore_bakeoff(
         baseline=config.baseline,
         bakeoff_id=run_path.name.split("__", 1)[0],
         golden_hash=records[0].golden_hash if records else "",
-        evaluator_fingerprint=records[0].evaluator_fingerprint if records else "",
+        evaluator_fingerprint=evaluator_fingerprint if records else "",
         gates=config.gates,
     )
     if persist:
@@ -68,3 +73,11 @@ def _case_from_record(record):
 def _rewrite_record(by_case_dir: Path, record) -> None:
     filename = f"case-{record.case_id}__variant-{record.variant_id}__iter-{record.iteration}.jsonl"
     (by_case_dir / filename).write_text(record.model_dump_json(indent=2), encoding="utf-8")
+
+
+def _first_rubric(config: BakeoffConfig):
+    for stage in config.pipeline:
+        rubric_value = getattr(stage, "rubric", None)
+        if stage.kind == "llm_rubric" and rubric_value:
+            return load_rubric(rubric_value)
+    return None

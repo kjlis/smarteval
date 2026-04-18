@@ -66,6 +66,7 @@ def _contract_map() -> dict[str, type[ContractValidator]]:
 
 
 def _scorer_map() -> dict[str, type[Scorer]]:
+    from smarteval.plugins.scorers.embedding_sim import EmbeddingSimScorer
     from smarteval.plugins.scorers.exact_match import ExactMatchScorer
     from smarteval.plugins.scorers.llm_rubric import LLMRubricScorer
     from smarteval.plugins.scorers.regex_match import RegexMatchScorer
@@ -73,6 +74,7 @@ def _scorer_map() -> dict[str, type[Scorer]]:
     builtins: dict[str, type[Scorer]] = {
         "exact_match": ExactMatchScorer,
         "regex_match": RegexMatchScorer,
+        "embedding_sim": EmbeddingSimScorer,
         "llm_rubric": LLMRubricScorer,
     }
     return _merge_entry_points("smarteval.scorers", builtins)

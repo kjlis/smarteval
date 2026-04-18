@@ -41,6 +41,19 @@ def rebaseline_evaluator(
                 else variant.mean_score - previous.mean_score
             ),
         }
+    original_slices = {(item.variant_id, item.slice_name): item for item in original_summary.per_slice}
+    per_slice_comparison = {}
+    for item in rescored_summary.per_slice:
+        previous = original_slices.get((item.variant_id, item.slice_name))
+        per_slice_comparison[f"{item.variant_id}:{item.slice_name}"] = {
+            "mean_score_before": previous.mean_score if previous else None,
+            "mean_score_after": item.mean_score,
+            "delta": (
+                None
+                if previous is None or previous.mean_score is None or item.mean_score is None
+                else item.mean_score - previous.mean_score
+            ),
+        }
 
     payload = {
         "from_model": from_model,
@@ -48,6 +61,7 @@ def rebaseline_evaluator(
         "old_fingerprint": original_fp,
         "new_fingerprint": new_fp,
         "comparison": comparison,
+        "per_slice_comparison": per_slice_comparison,
         "approved": approve,
     }
 

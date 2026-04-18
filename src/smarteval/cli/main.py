@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import typer
 from smarteval.core.config import load_config
 from smarteval.core.model_swap import select_variants_for_model_try
 from smarteval.core.models import Verdict
+from smarteval.core.golden import load_golden_set
 from smarteval.core.rebaseline import rebaseline_evaluator
 from smarteval.core.rescore import rescore_bakeoff
 from smarteval.core.runner import (
@@ -22,8 +24,9 @@ from smarteval.core.runner import (
     write_verdict_note_stub,
 )
 from smarteval.ledger.reader import read_ledger
-from smarteval.ledger.writer import append_verdict, ensure_ledger_layout
+from smarteval.ledger.writer import append_materialized_proposals, append_verdict, ensure_ledger_layout
 from smarteval.proposer.context import build_proposer_context
+from smarteval.proposer.materialize import materialize_proposals
 from smarteval.proposer.prompter import propose_variants
 
 app = typer.Typer(help="smarteval command line interface.")
@@ -50,9 +53,34 @@ def estimate(path: Path = Path("smarteval.yaml")) -> None:
 
 
 @app.command("run")
-def run(path: Path = Path("smarteval.yaml"), output_root: Path = Path("runs")) -> None:
+def run(
+    path: Path = Path("smarteval.yaml"),
+    output_root: Path = Path("runs"),
+    variant: list[str] | None = typer.Option(None, help="Restrict the run to specific variant ids."),
+    tag: list[str] | None = typer.Option(None, help="Require all listed tags on selected cases."),
+    case_pattern: str | None = typer.Option(None, help="Shell-style case id glob, for example 'math-*'."),
+    dry_run: bool = typer.Option(False, help="Print the preflight only."),
+) -> None:
     config = load_config(path)
-    run_dir, summary = run_bakeoff(config, output_root=output_root)
+    scoped_config = deepcopy(config)
+    if variant:
+        scoped_config.variants = [item for item in scoped_config.variants if item.id in set(variant)]
+        if not scoped_config.variants:
+            raise typer.BadParameter("no variants matched the requested --variant filters")
+        if scoped_config.gates.require_baseline and scoped_config.baseline not in {item.id for item in scoped_config.variants}:
+            raise typer.BadParameter("the filtered run omitted the baseline while gates.require_baseline is true")
+
+    preflight = _run_preflight(scoped_config, tags=tag or [], case_pattern=case_pattern)
+    typer.echo(f"Preflight: {json.dumps(preflight, indent=2)}")
+    if dry_run:
+        return
+
+    run_dir, summary = run_bakeoff(
+        scoped_config,
+        output_root=output_root,
+        case_tags=tag or None,
+        case_pattern=case_pattern,
+    )
     typer.echo(
         f"Completed bakeoff {summary.bakeoff_id} in {run_dir}. "
         f"Baseline={summary.baseline}, variants={len(summary.variants)}"
@@ -97,15 +125,18 @@ def log(path: Path = Path("smarteval.yaml"), tail: int = 20, status: str | None 
 def verdict(
     path: Path = Path("smarteval.yaml"),
     run_id: str = typer.Argument(...),
-    status: str = typer.Option(...),
-    promotion_level: str = typer.Option(...),
-    rationale: str = typer.Option(...),
+    status: str | None = typer.Option(None),
+    promotion_level: str | None = typer.Option(None),
+    rationale: str | None = typer.Option(None),
     author: str = typer.Option("human"),
     killed_by: str | None = typer.Option(None),
     follow_up_variant_id: str | None = typer.Option(None),
 ) -> None:
     config = load_config(path)
     ensure_ledger_layout(config.project_root or Path.cwd())
+    status = status or typer.prompt("status")
+    promotion_level = promotion_level or typer.prompt("promotion level")
+    rationale = rationale or typer.prompt("rationale")
     verdict_obj = Verdict(
         run_id=run_id,
         status=status,
@@ -150,14 +181,23 @@ def try_new_model(
     model_id: str = typer.Argument(...),
     path: Path = Path("smarteval.yaml"),
     variants: str = typer.Option("all"),
+    target: str = typer.Option("generator", help="Use 'generator' for candidate model swaps. Evaluator changes must use rebaseline."),
     output_root: Path = Path("runs"),
 ) -> None:
+    if target != "generator":
+        typer.echo("try-new-model only supports generator swaps; use rebaseline for evaluator changes", err=True)
+        raise typer.Exit(code=2)
     config = load_config(path)
     ledger = read_ledger(config.project_root or Path.cwd())
     target_ids = select_variants_for_model_try(config, ledger, variants)
+    llm_variant_found = False
     for variant in config.variants:
         if variant.id in target_ids and variant.generator.kind in {"openai", "codex"}:
             variant.generator.model = model_id
+            llm_variant_found = True
+    if not llm_variant_found:
+        typer.echo("no selected OpenAI/Codex generator variants were available to swap", err=True)
+        raise typer.Exit(code=2)
     run_dir, summary = run_bakeoff(config, output_root=output_root)
     typer.echo(f"Tried model {model_id} in {run_dir} ({summary.bakeoff_id})")
 
@@ -168,6 +208,8 @@ def propose(
     run_dir: Path = typer.Argument(...),
     n: int = 3,
     model: str | None = typer.Option(None),
+    write: bool = typer.Option(False, help="Persist proposals to the ledger even if autonomy.propose is suggest_only."),
+    run_now: bool = typer.Option(False, help="Queue a focused bakeoff for the proposed variants."),
 ) -> None:
     config = load_config(path)
     summary = read_summary(run_dir)
@@ -180,7 +222,25 @@ def propose(
         n=n,
         verdicts=ledger["verdicts"],
     )
-    typer.echo(json.dumps([item.model_dump() for item in proposals], indent=2))
+    persist = write or config.autonomy.get("propose") == "auto_queue"
+    payload: dict[str, object] = {"proposals": [item.model_dump() for item in proposals]}
+    if persist and proposals:
+        materialized = materialize_proposals(config.variants, proposals)
+        append_materialized_proposals(config.project_root or Path.cwd(), materialized, proposals)
+        payload["queued_variant_ids"] = [variant.id for variant in materialized]
+
+        should_run = run_now or config.autonomy.get("run") == "auto_queue"
+        if should_run:
+            original_variants = list(config.variants)
+            try:
+                baseline_variant = config.get_variant(config.baseline)
+                config.variants = [baseline_variant, *materialized]
+                queued_run_dir, queued_summary = run_bakeoff(config, output_root=Path(config.project_root or Path.cwd()) / "runs")
+                payload["queued_run_dir"] = str(queued_run_dir)
+                payload["queued_bakeoff_id"] = queued_summary.bakeoff_id
+            finally:
+                config.variants = original_variants
+    typer.echo(json.dumps(payload, indent=2))
 
 
 @app.command("init")
@@ -223,6 +283,32 @@ def init(
             encoding="utf-8",
         )
     typer.echo(f"Initialized config at {path}")
+
+
+def _run_preflight(config, *, tags: list[str], case_pattern: str | None) -> dict[str, int | float]:
+    cases, _ = load_golden_set(config.golden_set)
+    filtered_cases = cases
+    if tags:
+        required = set(tags)
+        filtered_cases = [case for case in filtered_cases if required.issubset(set(case.tags))]
+    if case_pattern:
+        from fnmatch import fnmatch
+
+        filtered_cases = [case for case in filtered_cases if fnmatch(case.id, case_pattern)]
+
+    total_runs = len(filtered_cases) * len(config.variants) * config.execution.runs_per_variant
+    generator_calls = len(
+        [variant for variant in config.variants if variant.generator.kind in {"openai", "codex", "pipeline", "script", "router"}]
+    )
+    evaluator_calls = len([stage for stage in config.pipeline if stage.kind in {"llm_rubric"}])
+    return {
+        "cases": len(filtered_cases),
+        "variants": len(config.variants),
+        "runs_per_variant": config.execution.runs_per_variant,
+        "total_runs": total_runs,
+        "estimated_generator_calls": len(filtered_cases) * generator_calls * config.execution.runs_per_variant,
+        "estimated_evaluator_calls": len(filtered_cases) * evaluator_calls * len(config.variants) * config.execution.runs_per_variant,
+    }
 
 
 if __name__ == "__main__":
