@@ -1,0 +1,142 @@
+@import './tokens.css';
+@import '@fontsource-variable/inter';
+@import '@fontsource/jetbrains-mono';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: 'Inter Variable', Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Styled scrollbars — applies to inspector panel + any overflow surfaces. */
+.rgv-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.rgv-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.rgv-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rgv-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid var(--bg-surface);
+}
+.rgv-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Empty-canvas dotted grid (used on GraphCanvas wrapper when no nodes). */
+.rgv-empty-grid {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Best-path edge draw animation. */
+@keyframes rgv-draw-edge {
+  from {
+    stroke-dashoffset: var(--rgv-edge-length, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.rgv-best-path {
+  filter: drop-shadow(0 0 4px var(--path-halo-strong));
+  stroke-dasharray: var(--rgv-edge-length, 1000);
+  animation: rgv-draw-edge 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mid-edge Δ badge ring (wraps the edge-delta text). */
+.rgv-edge-delta {
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke fill;
+  stroke: var(--bg-canvas);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Respect prefers-reduced-motion — disable all rgv-* animations, keep pan/zoom. */
+@media (prefers-reduced-motion: reduce) {
+  .rgv-best-path,
+  .rgv-fade-in,
+  .rgv-lineage-dim,
+  .rgv-panel-slide,
+  .rgv-theme-fade {
+    animation: none !important;
+    transition: none !important;
+  }
+  .rgv-best-path {
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/* Node entrance fade-in (applied per node with inline stagger delay). */
+@keyframes rgv-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rgv-fade-in {
+  animation: rgv-fade-in 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* React Flow base overrides — scoped under .rgv-graph wrapper. */
+.rgv-graph .react-flow__renderer {
+  background: var(--bg-canvas);
+}
+
+.rgv-graph .react-flow__attribution {
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.rgv-graph .react-flow__edge-path {
+  transition: stroke-width 120ms ease-out;
+}
+
+.rgv-graph .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2px;
+}
+
+.rgv-graph .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}

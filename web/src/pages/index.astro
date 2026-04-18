@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { GraphApp } from '../components/GraphApp';
+import rawGraph from '../../public/data/graph.json';
+import type { GraphExport } from '../lib/types';
+
+const graph = rawGraph as unknown as GraphExport;
+---
+
+<BaseLayout title="smarteval runs">
+  <main class="min-h-screen">
+    <header class="px-6 py-3 border-b" style="border-color: var(--border-subtle)">
+      <h1 class="text-[16px] font-semibold" style="color: var(--text-primary)">
+        smarteval runs
+      </h1>
+      <p class="text-[12px]" style="color: var(--text-secondary)">
+        Graph of variants, proposals, and optimization rounds.
+      </p>
+    </header>
+    <GraphApp graph={graph} client:only="react" />
+  </main>
+</BaseLayout>

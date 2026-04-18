@@ -1,0 +1,98 @@
+/*
+ * Design tokens for the smarteval runs graph viz.
+ * Owner: ui-expert. See web/PLAN.md section "UI / Visual Design" for rationale.
+ *
+ * Theme switch: <html data-theme="dark"> (default) or <html data-theme="light">.
+ * All React Flow inline styles read via var(--...) so the switch is free.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  /* Surfaces */
+  --bg-canvas: #0D1117;
+  --bg-surface: #161B22;
+  --bg-elevated: #1F2630;
+
+  /* Borders */
+  --border-subtle: #262E3A;
+  --border-strong: #3B4656;
+
+  /* Text */
+  --text-primary: #E6EDF3;
+  --text-secondary: #9BA6B2;
+  --text-tertiary: #6B7685;
+
+  /* Status — node fill / accent */
+  --status-baseline: #7D8590;
+  --status-winner: #F2C94C;
+  --status-improved: #3FB950;
+  --status-improved-mild: #56B672;
+  --status-regressed: #F85149;
+  --status-regressed-mild: #D65C5C;
+  --status-failed: #A371F7;
+  --status-rejected-exact: #58636F;
+  --status-rejected-semantic: #8B6F4E;
+  --status-unscored: #3B4656;
+
+  /* Edges */
+  --edge-accepted: var(--border-strong);
+  --edge-rejected: var(--text-tertiary);
+  --edge-best-path: #F2C94C;
+
+  /* Best-path halo (used as drop-shadow color) */
+  --path-glow: #F2C94C;
+  --path-halo: rgba(242, 201, 76, 0.18);
+  --path-halo-strong: rgba(242, 201, 76, 0.32);
+
+  /* Focus ring */
+  --focus-ring: #58A6FF;
+
+  /* Winner pill background tint */
+  --winner-pill-bg: rgba(242, 201, 76, 0.12);
+
+  /* Empty-canvas dotted grid */
+  --grid-dot: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='light'] {
+  /* Surfaces */
+  --bg-canvas: #FAFAF7;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F3F3EE;
+
+  /* Borders */
+  --border-subtle: #E5E4DE;
+  --border-strong: #C9C7BF;
+
+  /* Text */
+  --text-primary: #1A1A1A;
+  --text-secondary: #5A5A55;
+  --text-tertiary: #8A8A82;
+
+  /* Status */
+  --status-baseline: #4A4F57;
+  --status-winner: #C08A00;
+  --status-improved: #1F7A3A;
+  --status-improved-mild: #2E8B4F;
+  --status-regressed: #B92519;
+  --status-regressed-mild: #9A3B32;
+  --status-failed: #6F42C1;
+  --status-rejected-exact: #7A7970;
+  --status-rejected-semantic: #886641;
+  --status-unscored: #BFBDB4;
+
+  /* Edges */
+  --edge-accepted: var(--border-strong);
+  --edge-rejected: var(--text-tertiary);
+  --edge-best-path: #C08A00;
+
+  --path-glow: #C08A00;
+  --path-halo: rgba(192, 138, 0, 0.14);
+  --path-halo-strong: rgba(192, 138, 0, 0.28);
+
+  --focus-ring: #0366D6;
+
+  --winner-pill-bg: rgba(192, 138, 0, 0.12);
+
+  --grid-dot: rgba(0, 0, 0, 0.04);
+}

@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-04-18T14:00:00.000Z",
+  "projectName": "synthetic",
+  "baselineVariantId": "baseline",
+  "bakeoffs": [
+    {
+      "id": "bake-old",
+      "label": "Round 0 · bake-old",
+      "generatedAt": "2026-04-18T12:00:00.000Z",
+      "round": 0,
+      "optimizationRunId": "opt-syn",
+      "evaluatorFingerprint": "fp-111",
+      "goldenHash": "gh-111"
+    },
+    {
+      "id": "bake-noWin",
+      "label": "Round 1 · bake-noWin",
+      "generatedAt": "2026-04-18T12:30:00.000Z",
+      "round": 1,
+      "optimizationRunId": "opt-syn",
+      "evaluatorFingerprint": "fp-111",
+      "goldenHash": "gh-111"
+    },
+    {
+      "id": "bake-latest",
+      "label": "Round 2 · bake-latest",
+      "generatedAt": "2026-04-18T13:00:00.000Z",
+      "round": 2,
+      "optimizationRunId": "opt-syn",
+      "evaluatorFingerprint": "fp-111",
+      "goldenHash": "gh-111"
+    }
+  ],
+  "variants": [
+    {
+      "id": "baseline",
+      "parentId": null,
+      "author": "framework",
+      "hypothesis": null,
+      "rationale": "Baseline.",
+      "diff": {},
+      "createdAt": "2026-04-18T11:00:00.000Z",
+      "perBakeoff": {
+        "bake-old": {
+          "runCount": 1, "passRate": 0.0, "meanScore": 0.4, "meanScoreCiLow": 0.4, "meanScoreCiHigh": 0.4,
+          "deltaVsBaseline": null, "deltaCiLow": null, "deltaCiHigh": null,
+          "failedRunCount": 0, "sampleErrors": [], "meanDurationMs": 1000, "meanCostUsd": 0,
+          "inImprovementTrace": true, "isWinner": false
+        },
+        "bake-noWin": {
+          "runCount": 1, "passRate": 0.0, "meanScore": 0.4, "meanScoreCiLow": 0.4, "meanScoreCiHigh": 0.4,
+          "deltaVsBaseline": null, "deltaCiLow": null, "deltaCiHigh": null,
+          "failedRunCount": 0, "sampleErrors": [], "meanDurationMs": 1000, "meanCostUsd": 0,
+          "inImprovementTrace": true, "isWinner": true
+        },
+        "bake-latest": {
+          "runCount": 1, "passRate": 0.0, "meanScore": 0.4, "meanScoreCiLow": 0.4, "meanScoreCiHigh": 0.4,
+          "deltaVsBaseline": null, "deltaCiLow": null, "deltaCiHigh": null,
+          "failedRunCount": 0, "sampleErrors": [], "meanDurationMs": 1000, "meanCostUsd": 0,
+          "inImprovementTrace": true, "isWinner": false
+        }
+      }
+    },
+    {
+      "id": "ancestor-only-in-old",
+      "parentId": "baseline",
+      "author": "proposer",
+      "hypothesis": null,
+      "rationale": "Historical variant with no score in the latest bakeoff.",
+      "diff": {"params.x": "y"},
+      "createdAt": "2026-04-18T11:10:00.000Z",
+      "perBakeoff": {
+        "bake-old": {
+          "runCount": 1, "passRate": 0.0, "meanScore": 0.45, "meanScoreCiLow": 0.45, "meanScoreCiHigh": 0.45,
+          "deltaVsBaseline": 0.05, "deltaCiLow": 0.05, "deltaCiHigh": 0.05,
+          "failedRunCount": 0, "sampleErrors": [], "meanDurationMs": 1000, "meanCostUsd": 0,
+          "inImprovementTrace": false, "isWinner": false
+        }
+      }
+    },
+    {
+      "id": "winner-latest",
+      "parentId": "baseline",
+      "author": "proposer",
+      "hypothesis": "improve-score",
+      "rationale": "Winning variant in latest.",
+      "diff": {"params.y": "z"},
+      "createdAt": "2026-04-18T12:00:00.000Z",
+      "perBakeoff": {
+        "bake-latest": {
+          "runCount": 1, "passRate": 1.0, "meanScore": 0.8, "meanScoreCiLow": 0.8, "meanScoreCiHigh": 0.8,
+          "deltaVsBaseline": 0.4, "deltaCiLow": 0.4, "deltaCiHigh": 0.4,
+          "failedRunCount": 0, "sampleErrors": [], "meanDurationMs": 1000, "meanCostUsd": 0,
+          "inImprovementTrace": true, "isWinner": true
+        }
+      }
+    },
+    {
+      "id": "failing-variant",
+      "parentId": "baseline",
+      "author": "proposer",
+      "hypothesis": null,
+      "rationale": "Blows up on one case.",
+      "diff": {"params.boom": true},
+      "createdAt": "2026-04-18T12:15:00.000Z",
+      "perBakeoff": {
+        "bake-latest": {
+          "runCount": 2, "passRate": 0.5, "meanScore": 0.2, "meanScoreCiLow": 0.2, "meanScoreCiHigh": 0.2,
+          "deltaVsBaseline": -0.2, "deltaCiLow": -0.2, "deltaCiHigh": -0.2,
+          "failedRunCount": 1,
+          "sampleErrors": ["RuntimeError: boom on case-7", "Timeout after 30s"],
+          "meanDurationMs": 5000, "meanCostUsd": 0,
+          "inImprovementTrace": false, "isWinner": false
+        }
+      }
+    }
+  ],
+  "proposals": [
+    {
+      "proposalId": "prop-accepted-winner",
+      "parentVariantId": "baseline",
+      "status": "accepted",
+      "materializedVariantId": "winner-latest",
+      "rationale": "The one that worked.",
+      "expectedSlice": null,
+      "diff": {"params.y": "z"},
+      "duplicateOfVariantId": null,
+      "similarity": null,
+      "sourceRunDir": "/tmp/bake-old",
+      "createdAt": "2026-04-18T11:50:00.000Z"
+    },
+    {
+      "proposalId": "prop-rejected-exact",
+      "parentVariantId": "baseline",
+      "status": "rejected_exact_duplicate",
+      "materializedVariantId": null,
+      "rationale": "Exact duplicate of existing variant.",
+      "expectedSlice": null,
+      "diff": {"params.x": "y"},
+      "duplicateOfVariantId": "ancestor-only-in-old",
+      "similarity": 1.0,
+      "sourceRunDir": "/tmp/bake-latest",
+      "createdAt": "2026-04-18T12:20:00.000Z"
+    },
+    {
+      "proposalId": "prop-rejected-semantic",
+      "parentVariantId": "winner-latest",
+      "status": "rejected_semantic_duplicate",
+      "materializedVariantId": null,
+      "rationale": "Semantically similar to existing winner; no new information.",
+      "expectedSlice": null,
+      "diff": {"params.y2": "z2"},
+      "duplicateOfVariantId": "winner-latest",
+      "similarity": 0.87,
+      "sourceRunDir": "/tmp/bake-latest",
+      "createdAt": "2026-04-18T12:25:00.000Z"
+    },
+    {
+      "proposalId": "prop-all-rejected-1",
+      "parentVariantId": "winner-latest",
+      "status": "rejected_semantic_duplicate",
+      "materializedVariantId": null,
+      "rationale": "All-rejected round: candidate 1.",
+      "expectedSlice": null,
+      "diff": {"params.q": 1},
+      "duplicateOfVariantId": "winner-latest",
+      "similarity": 0.91,
+      "sourceRunDir": "/tmp/bake-noWin",
+      "createdAt": "2026-04-18T12:31:00.000Z"
+    },
+    {
+      "proposalId": "prop-all-rejected-2",
+      "parentVariantId": "winner-latest",
+      "status": "rejected_exact_duplicate",
+      "materializedVariantId": null,
+      "rationale": "All-rejected round: candidate 2.",
+      "expectedSlice": null,
+      "diff": {"params.r": 2},
+      "duplicateOfVariantId": "ancestor-only-in-old",
+      "similarity": 1.0,
+      "sourceRunDir": "/tmp/bake-noWin",
+      "createdAt": "2026-04-18T12:32:00.000Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "accepted",
+      "from": "baseline",
+      "to": "ancestor-only-in-old",
+      "proposalId": null,
+      "rationale": null,
+      "deltaVsParent": 0.05,
+      "changedFields": ["params.x"]
+    },
+    {
+      "kind": "accepted",
+      "from": "baseline",
+      "to": "winner-latest",
+      "proposalId": "prop-accepted-winner",
+      "rationale": "The one that worked.",
+      "deltaVsParent": 0.4,
+      "changedFields": ["params.y"]
+    },
+    {
+      "kind": "accepted",
+      "from": "baseline",
+      "to": "failing-variant",
+      "proposalId": null,
+      "rationale": null,
+      "deltaVsParent": -0.2,
+      "changedFields": ["params.boom"]
+    },
+    {
+      "kind": "rejected",
+      "from": "baseline",
+      "to": "proposal:prop-rejected-exact",
+      "proposalId": "prop-rejected-exact",
+      "rationale": "Exact duplicate of existing variant.",
+      "reason": "exact"
+    },
+    {
+      "kind": "rejected",
+      "from": "winner-latest",
+      "to": "proposal:prop-rejected-semantic",
+      "proposalId": "prop-rejected-semantic",
+      "rationale": "Semantically similar to existing winner; no new information.",
+      "reason": "semantic"
+    },
+    {
+      "kind": "rejected",
+      "from": "winner-latest",
+      "to": "proposal:prop-all-rejected-1",
+      "proposalId": "prop-all-rejected-1",
+      "rationale": "All-rejected round: candidate 1.",
+      "reason": "semantic"
+    },
+    {
+      "kind": "rejected",
+      "from": "winner-latest",
+      "to": "proposal:prop-all-rejected-2",
+      "proposalId": "prop-all-rejected-2",
+      "rationale": "All-rejected round: candidate 2.",
+      "reason": "exact"
+    }
+  ],
+  "improvementTraces": {
+    "bake-latest": [
+      {
+        "parentVariantId": "baseline",
+        "variantId": "winner-latest",
+        "rationale": "The one that worked.",
+        "hypothesis": "improve-score",
+        "judgeJustification": "Clear improvement across slices.",
+        "deltaVsParent": 0.4,
+        "deltaVsBaseline": 0.4,
+        "changes": [
+          {"fieldPath": "params.y", "before": null, "after": "z", "summary": "y -> z"}
+        ]
+      }
+    ]
+  },
+  "optimizationRuns": [
+    {
+      "id": "opt-syn",
+      "initialRunDir": "/tmp/bake-old",
+      "finalRunDir": "/tmp/bake-latest",
+      "initialBestVariantId": "baseline",
+      "initialBestMeanScore": 0.4,
+      "roundsCompleted": 2,
+      "rounds": [
+        {
+          "round": 1,
+          "sourceRunDir": "/tmp/bake-old",
+          "queuedRunDir": "/tmp/bake-noWin",
+          "status": "completed",
+          "proposalCount": 2,
+          "rejectedProposalCount": 2,
+          "proposalParentIds": ["winner-latest", "winner-latest"],
+          "queuedVariantIds": [],
+          "bestVariantId": null,
+          "bestMeanScore": null
+        },
+        {
+          "round": 2,
+          "sourceRunDir": "/tmp/bake-noWin",
+          "queuedRunDir": "/tmp/bake-latest",
+          "status": "completed",
+          "proposalCount": 1,
+          "rejectedProposalCount": 0,
+          "proposalParentIds": ["baseline"],
+          "queuedVariantIds": ["winner-latest"],
+          "bestVariantId": "winner-latest",
+          "bestMeanScore": 0.8
+        }
+      ]
+    }
+  ]
+}
