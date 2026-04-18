@@ -1,0 +1,115 @@
+{
+  "config_path": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/smarteval.yaml",
+  "rounds_requested": 5,
+  "rounds_completed": 5,
+  "proposals_per_round": 3,
+  "proposer_backend": "codex_local",
+  "proposer_model": "gpt-5.4",
+  "initial_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-37-32__2026-0",
+  "initial_best_variant_id": "baseline",
+  "initial_best_mean_score": 0.30000000000000004,
+  "rounds": [
+    {
+      "round": 1,
+      "source_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-37-32__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418123818-1",
+        "baseline-proposal-20260418123818-2",
+        "baseline-proposal-20260418123818-3"
+      ],
+      "queued_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-38-18__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.3600000000000001
+    },
+    {
+      "round": 2,
+      "source_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-38-18__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418124007-1",
+        "baseline-proposal-20260418124007-2",
+        "baseline-proposal-20260418124007-3"
+      ],
+      "queued_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-40-07__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.3800000000000001
+    },
+    {
+      "round": 3,
+      "source_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-40-07__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418124135-1",
+        "baseline-proposal-20260418124135-2",
+        "baseline-proposal-20260418124135-3"
+      ],
+      "queued_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-41-35__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.30000000000000004
+    },
+    {
+      "round": 4,
+      "source_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-41-35__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418124322-1",
+        "baseline-proposal-20260418124322-2",
+        "baseline-proposal-20260418124322-3"
+      ],
+      "queued_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-43-22__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.3800000000000001
+    },
+    {
+      "round": 5,
+      "source_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-43-22__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418124459-1",
+        "baseline-proposal-20260418124459-2",
+        "baseline-proposal-20260418124459-3"
+      ],
+      "queued_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-44-59__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.32000000000000006
+    }
+  ],
+  "final_run_dir": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/runs/2026-04-18T12-44-59__2026-0",
+  "trace_path": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/optimization-runs/2026-04-18T12-37-32.json"
+}

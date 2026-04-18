@@ -1,0 +1,55 @@
+{
+  "bakeoff_id": "2026-04-18T12-37-32",
+  "baseline": "baseline",
+  "evaluator_fingerprint": "68a006d5a756",
+  "golden_hash": "29006320a251",
+  "generated_at": "2026-04-18T12:37:59.491373Z",
+  "variants": [
+    {
+      "variant_id": "baseline",
+      "run_count": 1,
+      "pass_rate": 0.0,
+      "pass_rate_ci_low": 0.0,
+      "pass_rate_ci_high": 0.0,
+      "mean_score": 0.30000000000000004,
+      "mean_score_ci_low": 0.30000000000000004,
+      "mean_score_ci_high": 0.30000000000000004,
+      "mean_cost_usd": 0.0,
+      "mean_duration_ms": 26659.0,
+      "failed_run_count": 0,
+      "sample_errors": [],
+      "delta_vs_baseline": null,
+      "delta_ci_low": null,
+      "delta_ci_high": null
+    }
+  ],
+  "per_slice": [
+    {
+      "slice_name": "asr-demo",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.30000000000000004,
+      "delta_vs_baseline": null
+    },
+    {
+      "slice_name": "note",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.30000000000000004,
+      "delta_vs_baseline": null
+    },
+    {
+      "slice_name": "optimization-path",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.30000000000000004,
+      "delta_vs_baseline": null
+    }
+  ],
+  "specialists": [],
+  "improvement_traces": [],
+  "regressions": [],
+  "total_cost_usd": 0.0,
+  "total_duration_ms": 26659,
+  "schema_version": 2
+}

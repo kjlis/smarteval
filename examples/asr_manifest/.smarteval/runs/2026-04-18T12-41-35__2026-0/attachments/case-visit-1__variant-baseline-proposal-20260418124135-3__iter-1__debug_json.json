@@ -1,0 +1,41 @@
+{
+  "dimensions": {
+    "factual_capture": 0.68,
+    "grammar": 0.73,
+    "recommendation_quality": 0.71,
+    "structure": 0.54
+  },
+  "effects": [
+    "profile=custom",
+    "factual_capture=0.68",
+    "grammar=0.73",
+    "structure=0.54",
+    "recommendation_quality=0.71",
+    "asr_model=parakeet",
+    "prompt_style=structured_clinical"
+  ],
+  "language_leakage": {
+    "language": "none",
+    "tokens": []
+  },
+  "note": "Clinical note for Jordan Lee: evaluated for persistent cough, fever, and fatigue with mixed-quality pipeline settings. The note is serviceable but not calibrated to one of the explicit demo profiles.",
+  "pipeline_config": {
+    "asr": {
+      "model": "parakeet"
+    },
+    "note_generation": {
+      "model": "gpt-5",
+      "prompt_style": "structured_clinical"
+    },
+    "preprocessing": {
+      "denoise": "mild",
+      "silence_trimming": "moderate",
+      "vad": "balanced",
+      "voice_enhancement": "on"
+    }
+  },
+  "profile": "custom",
+  "quality_band": "low",
+  "quality_score": 0.67,
+  "transcript": "Clinician/Patient transcript\nPatient reports persistent cough, fever, and fatigue and feels fatigued. Additional details vary by config."
+}
