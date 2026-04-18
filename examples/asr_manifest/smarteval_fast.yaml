@@ -1,29 +1,29 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-note
+baseline: asr-fast
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
   model: gpt-5-mini
 variants:
-  - id: asr-note
-    description: Deterministic ASR-note demo pipeline variant.
+  - id: asr-fast
+    description: Fast deterministic demo with more loss from preprocessing and brief note formatting.
     generator:
       kind: pipeline
     params:
       callable: deterministic_pipeline.fake_pipeline:run_pipeline
       pipeline_config:
         preprocessing:
-          denoise: mild
-          voice_enhancement: on
-          silence_trimming: conservative
-          vad: basic
+          denoise: off
+          voice_enhancement: off
+          silence_trimming: aggressive
+          vad: strict
         asr:
-          model: whisper
+          model: parakeet
         note_generation:
           model: gpt-5-mini
-          prompt_style: soap
+          prompt_style: brief
 pipeline:
   - id: exact
     kind: exact_match

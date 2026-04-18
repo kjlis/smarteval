@@ -1,0 +1,11 @@
+pipeline_config:
+  preprocessing:
+    denoise: off
+    voice_enhancement: off
+    silence_trimming: aggressive
+    vad: strict
+  asr:
+    model: parakeet
+  note_generation:
+    model: gpt-5-mini
+    prompt_style: brief

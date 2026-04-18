@@ -1,0 +1,11 @@
+pipeline_config:
+  preprocessing:
+    denoise: mild
+    voice_enhancement: on
+    silence_trimming: conservative
+    vad: basic
+  asr:
+    model: whisper
+  note_generation:
+    model: gpt-5-mini
+    prompt_style: soap

@@ -1,14 +1,14 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-note
+baseline: asr-best
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
   model: gpt-5-mini
 variants:
-  - id: asr-note
-    description: Deterministic ASR-note demo pipeline variant.
+  - id: asr-best
+    description: Best-quality deterministic demo with stronger ASR and detailed note formatting.
     generator:
       kind: pipeline
     params:
@@ -22,8 +22,8 @@ variants:
         asr:
           model: whisper
         note_generation:
-          model: gpt-5-mini
-          prompt_style: soap
+          model: gpt-5
+          prompt_style: detailed
 pipeline:
   - id: exact
     kind: exact_match

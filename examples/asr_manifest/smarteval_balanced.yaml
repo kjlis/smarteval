@@ -1,14 +1,14 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-note
+baseline: asr-balanced
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
   model: gpt-5-mini
 variants:
-  - id: asr-note
-    description: Deterministic ASR-note demo pipeline variant.
+  - id: asr-balanced
+    description: Balanced deterministic demo with moderate preprocessing and SOAP note structure.
     generator:
       kind: pipeline
     params:

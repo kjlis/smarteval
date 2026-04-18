@@ -31,7 +31,7 @@ def _resolve_known_paths(raw: dict, root: Path) -> dict:
         item = dict(variant)
         params = dict(item.get("params", {}))
         for key in ("prompt", "pipeline_config"):
-            if key in params:
+            if key in params and isinstance(params[key], str):
                 params[key] = str(_resolve_path_like(params[key], root))
         item["params"] = params
         variants.append(item)

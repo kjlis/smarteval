@@ -1,0 +1,14 @@
+patient_name: Jordan Lee
+speaker_roles:
+  - clinician
+  - patient
+complaint: cough and fever
+duration_days: 3
+medications:
+  - ibuprofen
+allergies:
+  - penicillin
+plan:
+  - hydration
+  - rest
+  - return if symptoms worsen

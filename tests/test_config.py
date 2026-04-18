@@ -80,6 +80,37 @@ class ConfigLoadingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_config(config_path)
 
+    def test_deterministic_demo_configs_load(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        demo_configs = [
+            root / "examples" / "asr_manifest" / "smarteval_fast.yaml",
+            root / "examples" / "asr_manifest" / "smarteval_balanced.yaml",
+            root / "examples" / "asr_manifest" / "smarteval_best.yaml",
+        ]
+
+        loaded_ids: list[str] = []
+        prompt_styles: list[str] = []
+        asr_models: list[str] = []
+
+        for config_path in demo_configs:
+            config = load_config(config_path)
+            variant = config.get_variant(config.baseline)
+            generator, params = create_generator(variant, config=config)
+
+            loaded_ids.append(variant.id)
+            prompt_styles.append(params["pipeline_config"]["note_generation"]["prompt_style"])
+            asr_models.append(params["pipeline_config"]["asr"]["model"])
+
+            self.assertEqual(generator.name, "pipeline")
+            self.assertEqual(
+                params["callable"], "deterministic_pipeline.fake_pipeline:run_pipeline"
+            )
+            self.assertEqual(params["primary_output"], "note_txt")
+
+        self.assertEqual(loaded_ids, ["asr-fast", "asr-balanced", "asr-best"])
+        self.assertEqual(prompt_styles, ["brief", "soap", "detailed"])
+        self.assertEqual(asr_models, ["parakeet", "whisper", "whisper"])
+
 
 if __name__ == "__main__":
     unittest.main()
