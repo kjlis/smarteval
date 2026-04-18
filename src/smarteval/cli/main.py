@@ -24,10 +24,10 @@ from smarteval.core.runner import (
     write_verdict_note_stub,
 )
 from smarteval.ledger.reader import read_ledger
-from smarteval.ledger.writer import append_materialized_proposals, append_verdict, ensure_ledger_layout
+from smarteval.ledger.writer import append_materialized_proposals, append_proposal_attempts, append_verdict, ensure_ledger_layout
 from smarteval.proposer.context import build_proposer_context
 from smarteval.proposer.materialize import materialize_proposals
-from smarteval.proposer.prompter import propose_variants
+from smarteval.proposer.prompter import propose_variants_with_reviews
 
 app = typer.Typer(help="smarteval command line interface.")
 
@@ -218,7 +218,7 @@ def propose(
     records = list(load_run_records(run_dir).values())
     context = build_proposer_context(config, summary, records)
     ledger = read_ledger(config.project_root or Path.cwd())
-    proposals = propose_variants(
+    proposals, reviews = propose_variants_with_reviews(
         model=model or config.evaluator.model,
         context=context,
         n=n,
@@ -228,6 +228,7 @@ def propose(
     )
     persist = write or config.autonomy.get("propose") == "auto_queue"
     payload: dict[str, object] = {"proposals": [item.model_dump() for item in proposals]}
+    materialized: list | None = None
     if persist and proposals:
         materialized = materialize_proposals(config.variants, proposals)
         append_materialized_proposals(config.project_root or Path.cwd(), materialized, proposals)
@@ -244,6 +245,13 @@ def propose(
                 payload["queued_bakeoff_id"] = queued_summary.bakeoff_id
             finally:
                 config.variants = original_variants
+    if reviews:
+        append_proposal_attempts(
+            config.project_root or Path.cwd(),
+            reviews,
+            source_run_dir=str(run_dir),
+            materialized_variants=materialized,
+        )
     typer.echo(json.dumps(payload, indent=2))
 
 

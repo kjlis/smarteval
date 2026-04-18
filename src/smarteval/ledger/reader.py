@@ -19,5 +19,6 @@ def read_ledger(project_root: str | Path) -> dict[str, list[dict]]:
     root = Path(project_root) / "ledger"
     return {
         "variants": read_jsonl(root / "variants.jsonl"),
+        "proposals": read_jsonl(root / "proposals.jsonl"),
         "verdicts": read_jsonl(root / "verdicts.jsonl"),
     }

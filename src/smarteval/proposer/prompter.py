@@ -6,7 +6,7 @@ from typing import Any
 from smarteval.core.codex_client import build_codex_client
 from smarteval.core.models import VariantProposal
 from smarteval.core.openai_client import build_openai_client
-from smarteval.proposer.dedup import filter_duplicate_proposals
+from smarteval.proposer.dedup import ProposalReview, review_proposals
 
 
 def propose_variants(
@@ -21,6 +21,32 @@ def propose_variants(
     client: Any | None = None,
     verdicts: list[dict] | None = None,
 ) -> list[VariantProposal]:
+    proposals, _ = propose_variants_with_reviews(
+        model=model,
+        context=context,
+        n=n,
+        api_key=api_key,
+        base_url=base_url,
+        backend=backend,
+        codex_bin=codex_bin,
+        client=client,
+        verdicts=verdicts,
+    )
+    return proposals
+
+
+def propose_variants_with_reviews(
+    *,
+    model: str,
+    context: dict[str, Any],
+    n: int = 3,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    backend: str = "codex_local",
+    codex_bin: str | None = None,
+    client: Any | None = None,
+    verdicts: list[dict] | None = None,
+) -> tuple[list[VariantProposal], list[ProposalReview]]:
     prompt = _proposal_prompt(context=context, n=n)
     payload = _request_payload(
         model=model,
@@ -32,9 +58,9 @@ def propose_variants(
         client=client,
     )
     proposals = [VariantProposal.model_validate(_normalize_proposal_item(item)) for item in payload.get("proposals", [])[:n]]
-    if verdicts:
-        proposals = filter_duplicate_proposals(proposals, verdicts)
-    return proposals
+    reviews = review_proposals(proposals, verdicts or [])
+    accepted = [item.proposal for item in reviews if item.status == "accepted"]
+    return accepted, reviews
 
 
 def _proposal_prompt(*, context: dict[str, Any], n: int) -> str:

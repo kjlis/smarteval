@@ -198,6 +198,7 @@ def summarize_runs(
     for variant_id, records in grouped.items():
         pass_values = [1.0 if record.status == "success" and _record_passed(record) else 0.0 for record in records]
         score_values = [score.value for record in records for score in record.scores if score.value is not None]
+        failed_records = [record for record in records if record.status == "failed"]
         pass_rate = mean(pass_values)
         pass_rate_ci = bootstrap_ci(pass_values)
         mean_score = mean_or_none(score_values)
@@ -216,6 +217,8 @@ def summarize_runs(
             mean_score_ci_high=mean_score_ci[1],
             mean_cost_usd=mean(record.cost_usd for record in records),
             mean_duration_ms=mean(record.duration_ms for record in records),
+            failed_run_count=len(failed_records),
+            sample_errors=_sample_errors(failed_records),
             delta_vs_baseline=delta,
             delta_ci_low=delta_ci[0],
             delta_ci_high=delta_ci[1],
@@ -386,6 +389,17 @@ def _per_case_scores(records: list[RunRecord]) -> dict[str, float]:
         if values:
             grouped[record.case_id].append(mean(values))
     return {case_id: mean(values) for case_id, values in grouped.items()}
+
+
+def _sample_errors(records: list[RunRecord], *, limit: int = 3) -> list[str]:
+    samples: list[str] = []
+    for record in records:
+        if not record.error or record.error in samples:
+            continue
+        samples.append(record.error)
+        if len(samples) >= limit:
+            break
+    return samples
 
 
 def _write_run_record(by_case_dir: Path, record: RunRecord) -> None:

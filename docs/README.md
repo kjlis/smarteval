@@ -10,12 +10,14 @@ This directory is the operator and contributor guide for `smarteval`.
 4. [Scoring And Gates](scoring-and-gates.md)
 5. [CLI](cli.md)
 6. [Optimization](optimization.md)
-7. [Development](development.md)
+7. [Graphing Results](graph.md)
+8. [Development](development.md)
 
 Summary and lineage details are split across:
 
 - [Scoring And Gates](scoring-and-gates.md) for what each run writes out
 - [Optimization](optimization.md) for how proposal ancestry is recorded and reconstructed
+- [Graphing Results](graph.md) for turning ledger and run outputs into a change graph
 
 ## Scope
 

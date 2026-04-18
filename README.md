@@ -55,6 +55,7 @@ smarteval log
 - [docs/cli.md](docs/cli.md)
 - [docs/pipelines-and-asr.md](docs/pipelines-and-asr.md)
 - [docs/optimization.md](docs/optimization.md)
+- [docs/graph.md](docs/graph.md)
 
 The ASR example shows the intended v1 pattern:
 
@@ -105,6 +106,7 @@ python scripts/optimize_loop.py --path smarteval.yaml [--rounds 5] [--proposals-
 - `smarteval propose` now uses the local Codex proposer backend by default. Pass `--backend openai` to force the previous OpenAI Responses path.
 - `python scripts/optimize_loop.py` runs an initial bakeoff, proposes improvements, persists materialized variants into `ledger/variants.jsonl`, and reruns focused bakeoffs for multiple rounds.
 - Run summaries now include `improvement_traces`, which tie score deltas back to the recorded proposal rationale, changed fields, and parent-to-child lift for the best path from baseline.
+- Proposal attempts are also tracked in `ledger/proposals.jsonl`, including rejected duplicates, so later graphing can show failed branches instead of only accepted variants.
 - `try-new-model` is for generator swaps only. Evaluator changes must go through `rebaseline`.
 - `rescore` reuses stored artifacts instead of rerunning generators.
 - Project-level evaluator locks live under `.smarteval/lock.json`.

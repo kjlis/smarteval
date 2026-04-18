@@ -66,6 +66,7 @@ This prevents obviously repeated dead variants from being re-queued.
 ## Ledger Files
 
 - `ledger/variants.jsonl`
+- `ledger/proposals.jsonl`
 - `ledger/verdicts.jsonl`
 - `ledger/notes/`
 
@@ -144,6 +145,10 @@ Each step records:
 - the observed delta vs the immediate parent
 - the cumulative delta vs baseline
 - the evaluator's overall justification when available from `llm_rubric`
+
+Rejected proposal attempts are written to `ledger/proposals.jsonl` with a rejection status,
+duplicate target, and similarity score when applicable. This makes it possible to graph failed
+branches alongside accepted variants later.
 
 ## Current Limits
 

@@ -56,6 +56,11 @@ class RunnerTests(unittest.TestCase):
                           kind: script
                         params:
                           callable: tests.helpers:always_wrong
+                      - id: broken
+                        generator:
+                          kind: script
+                        params:
+                          callable: tests.helpers:does_not_exist
                       - id: winner
                         generator:
                           kind: script
@@ -76,7 +81,7 @@ class RunnerTests(unittest.TestCase):
 
             config = load_config(config_path)
             estimate = estimate_bakeoff(config)
-            self.assertEqual(estimate["total_runs"], 4)
+            self.assertEqual(estimate["total_runs"], 6)
 
             run_dir, summary = run_bakeoff(config, output_root=tmp_path / "runs")
             self.assertTrue((run_dir / "summary.md").exists())
@@ -89,6 +94,8 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(variants["baseline"]["mean_score"], 0.0)
             self.assertEqual(variants["winner"]["mean_score"], 1.0)
             self.assertGreater(variants["winner"]["delta_vs_baseline"], 0.0)
+            self.assertEqual(variants["broken"]["failed_run_count"], 2)
+            self.assertTrue(variants["broken"]["sample_errors"])
             traces = {item["variant_id"]: item for item in summary_payload["improvement_traces"]}
             winner_trace = traces["winner"]
             self.assertEqual(winner_trace["baseline_variant_id"], "baseline")

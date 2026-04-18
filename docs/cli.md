@@ -87,6 +87,7 @@ Behavior:
 - `--codex-bin` lets you point at a specific local Codex binary when it is not on `PATH`
 - `--write` persists proposals even when `autonomy.propose` is `suggest_only`
 - `--run-now` queues a focused bakeoff with baseline plus the newly materialized proposals
+- rejected proposal attempts are tracked in `ledger/proposals.jsonl` when dedup filters them out
 
 If autonomy is set to auto-queue, proposals are materialized into child variants and may immediately run as a focused bakeoff.
 

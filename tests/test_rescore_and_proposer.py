@@ -15,7 +15,8 @@ from smarteval.core.rescore import rescore_bakeoff
 from smarteval.core.runner import load_run_records, read_summary, run_bakeoff
 from smarteval.core.models import VariantProposal
 from smarteval.proposer.context import build_proposer_context
-from smarteval.proposer.prompter import propose_variants
+from smarteval.proposer.dedup import ProposalReview
+from smarteval.proposer.prompter import propose_variants, propose_variants_with_reviews
 
 
 class FakeUsage:
@@ -336,6 +337,30 @@ class RescoreAndProposerTests(unittest.TestCase):
         self.assertEqual(len(proposals), 1)
         self.assertEqual(proposals[0].expected_slice, '{"tags": ["math", "hard"]}')
 
+    def test_proposer_with_reviews_reports_rejected_duplicates(self) -> None:
+        accepted, reviews = propose_variants_with_reviews(
+            model="gpt-4.1",
+            context={"x": 1},
+            backend="openai",
+            client=FakeClient(
+                '{"proposals":[{"parent_variant_id":"baseline","rationale":"rewrite","diff":{"params.prompt_text":"answer carefully and concisely"},"expected_slice":"math"}]}'
+            ),
+            verdicts=[
+                {
+                    "variant_id": "dead-1",
+                    "parent_variant_id": "baseline",
+                    "status": "loss",
+                    "promotion_level": "dead",
+                    "diff": {"params.prompt_text": "answer concisely and carefully"},
+                }
+            ],
+        )
+
+        self.assertEqual(accepted, [])
+        self.assertEqual(len(reviews), 1)
+        self.assertEqual(reviews[0].status, "rejected_semantic_duplicate")
+        self.assertEqual(reviews[0].duplicate_of_variant_id, "dead-1")
+
     def test_cli_propose_persists_and_auto_queues_materialized_variants(self) -> None:
         runner = CliRunner()
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -375,22 +400,45 @@ class RescoreAndProposerTests(unittest.TestCase):
             config = load_config(config_path)
             run_dir, _ = run_bakeoff(config, output_root=tmp / "runs")
 
-            original_propose = cli_main.propose_variants
-            cli_main.propose_variants = lambda **kwargs: [
-                VariantProposal(
-                    parent_variant_id="baseline",
-                    rationale="try a different prompt",
-                    diff={"params.prompt_text": "answer carefully"},
-                    expected_slice="math",
-                )
-            ]
+            original_propose = cli_main.propose_variants_with_reviews
+            cli_main.propose_variants_with_reviews = lambda **kwargs: (
+                [
+                    VariantProposal(
+                        parent_variant_id="baseline",
+                        rationale="try a different prompt",
+                        diff={"params.prompt_text": "answer carefully"},
+                        expected_slice="math",
+                    )
+                ],
+                [
+                    ProposalReview(
+                        proposal=VariantProposal(
+                            parent_variant_id="baseline",
+                            rationale="try a different prompt",
+                            diff={"params.prompt_text": "answer carefully"},
+                            expected_slice="math",
+                        ),
+                        status="accepted",
+                    ),
+                    ProposalReview(
+                        proposal=VariantProposal(
+                            parent_variant_id="baseline",
+                            rationale="repeat dead path",
+                            diff={"params.prompt_text": "same as dead"},
+                            expected_slice="math",
+                        ),
+                        status="rejected_exact_duplicate",
+                        duplicate_of_variant_id="dead-baseline",
+                    ),
+                ],
+            )
             try:
                 result = runner.invoke(
                     cli_main.app,
                     ["propose", "--path", str(config_path), str(run_dir), "--n", "1"],
                 )
             finally:
-                cli_main.propose_variants = original_propose
+                cli_main.propose_variants_with_reviews = original_propose
 
             self.assertEqual(result.exit_code, 0)
             payload = json.loads(result.stdout)
@@ -398,6 +446,10 @@ class RescoreAndProposerTests(unittest.TestCase):
             self.assertIn("queued_run_dir", payload)
             variants_log = (tmp / "ledger" / "variants.jsonl").read_text(encoding="utf-8")
             self.assertIn("baseline-proposal-", variants_log)
+            proposals_log = (tmp / "ledger" / "proposals.jsonl").read_text(encoding="utf-8")
+            self.assertIn('"status":"accepted"', proposals_log)
+            self.assertIn('"status":"rejected_exact_duplicate"', proposals_log)
+            self.assertIn('"materialized_variant_id":"baseline-proposal-', proposals_log)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,10 @@ from smarteval.core.config import load_config
 from smarteval.core.models import Variant, VariantProposal
 from smarteval.core.runner import load_run_records, read_summary, run_bakeoff
 from smarteval.ledger.reader import read_ledger
-from smarteval.ledger.writer import append_materialized_proposals
+from smarteval.ledger.writer import append_materialized_proposals, append_proposal_attempts
 from smarteval.proposer.context import build_proposer_context
 from smarteval.proposer.materialize import materialize_proposals
-from smarteval.proposer.prompter import propose_variants
+from smarteval.proposer.prompter import propose_variants_with_reviews
 
 
 def run_optimization_loop(
@@ -26,7 +26,7 @@ def run_optimization_loop(
     model: str | None = None,
     backend: str = "codex_local",
     codex_bin: str | None = None,
-    propose_fn: Callable[..., list[VariantProposal]] = propose_variants,
+    propose_fn: Callable[..., tuple[list[VariantProposal], list[Any]]] = propose_variants_with_reviews,
     proposer_client: Any | None = None,
 ) -> dict[str, Any]:
     config = load_config(path)
@@ -61,7 +61,7 @@ def run_optimization_loop(
         context = build_proposer_context(round_config, summary, records)
         ledger = read_ledger(project_root)
 
-        proposals = propose_fn(
+        proposal_result = propose_fn(
             model=model or config.evaluator.model,
             context=context,
             n=proposals_per_round,
@@ -70,12 +70,36 @@ def run_optimization_loop(
             client=proposer_client,
             verdicts=ledger["verdicts"],
         )
+        if isinstance(proposal_result, tuple):
+            proposals, reviews = proposal_result
+        else:
+            proposals = proposal_result
+            reviews = []
         round_entry: dict[str, Any] = {
             "round": round_index,
             "source_run_dir": str(current_run_dir),
             "proposal_count": len(proposals),
+            "rejected_proposal_count": len([item for item in reviews if item.status != "accepted"]),
             "proposal_parent_ids": [proposal.parent_variant_id for proposal in proposals],
         }
+        rejected_reviews = [item for item in reviews if item.status != "accepted"]
+        if rejected_reviews:
+            append_proposal_attempts(
+                project_root,
+                rejected_reviews,
+                source_run_dir=str(current_run_dir),
+            )
+            round_entry["rejected_proposals"] = [
+                {
+                    "status": item.status,
+                    "parent_variant_id": item.proposal.parent_variant_id,
+                    "rationale": item.proposal.rationale,
+                    "diff": item.proposal.diff,
+                    "duplicate_of_variant_id": item.duplicate_of_variant_id,
+                    "similarity": item.similarity,
+                }
+                for item in rejected_reviews
+            ]
         if not proposals:
             round_entry["status"] = "stopped_no_proposals"
             trace["rounds"].append(round_entry)
@@ -85,6 +109,12 @@ def run_optimization_loop(
 
         materialized = materialize_proposals(current_variants, proposals)
         append_materialized_proposals(project_root, materialized, proposals)
+        append_proposal_attempts(
+            project_root,
+            [item for item in reviews if item.status == "accepted"],
+            source_run_dir=str(current_run_dir),
+            materialized_variants=materialized,
+        )
 
         baseline_variant = _baseline_variant(current_variants, config.baseline)
         queued_config = deepcopy(config)

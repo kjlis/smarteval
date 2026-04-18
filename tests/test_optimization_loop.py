@@ -8,6 +8,7 @@ from pathlib import Path
 
 from smarteval.core.models import VariantProposal
 from smarteval.optimization.loop import run_optimization_loop
+from smarteval.proposer.dedup import ProposalReview
 
 
 class OptimizationLoopTests(unittest.TestCase):
@@ -49,23 +50,36 @@ class OptimizationLoopTests(unittest.TestCase):
             def fake_propose(**kwargs):
                 calls.append(kwargs)
                 if len(calls) == 1:
+                    proposal = VariantProposal(
+                        parent_variant_id="baseline",
+                        rationale="fix callable",
+                        diff={"params.callable": "tests.helpers:echo_expected"},
+                        expected_slice="math",
+                    )
+                    rejected = VariantProposal(
+                        parent_variant_id="baseline",
+                        rationale="repeat a dead idea",
+                        diff={"params.prompt_text": "same old path"},
+                        expected_slice="math",
+                    )
                     return [
-                        VariantProposal(
-                            parent_variant_id="baseline",
-                            rationale="fix callable",
-                            diff={"params.callable": "tests.helpers:echo_expected"},
-                            expected_slice="math",
-                        )
+                        proposal
+                    ], [
+                        ProposalReview(proposal=proposal, status="accepted"),
+                        ProposalReview(
+                            proposal=rejected,
+                            status="rejected_exact_duplicate",
+                            duplicate_of_variant_id="dead-baseline",
+                        ),
                     ]
                 if len(calls) == 2:
-                    return [
-                        VariantProposal(
-                            parent_variant_id=kwargs["context"]["current_best_variant"]["id"],
-                            rationale="keep winning variant and annotate it",
-                            diff={"description": "second round improvement"},
-                            expected_slice="math",
-                        )
-                    ]
+                    proposal = VariantProposal(
+                        parent_variant_id=kwargs["context"]["current_best_variant"]["id"],
+                        rationale="keep winning variant and annotate it",
+                        diff={"description": "second round improvement"},
+                        expected_slice="math",
+                    )
+                    return [proposal], [ProposalReview(proposal=proposal, status="accepted")]
                 return []
 
             trace = run_optimization_loop(
@@ -85,10 +99,15 @@ class OptimizationLoopTests(unittest.TestCase):
             self.assertEqual(trace["rounds"][2]["status"], "stopped_no_proposals")
             self.assertTrue(trace["rounds"][0]["queued_variant_ids"][0].startswith("baseline-proposal-"))
             self.assertTrue(trace["rounds"][1]["queued_variant_ids"][0].startswith("baseline-proposal-"))
+            self.assertEqual(trace["rounds"][0]["rejected_proposal_count"], 1)
+            self.assertEqual(trace["rounds"][0]["rejected_proposals"][0]["duplicate_of_variant_id"], "dead-baseline")
 
             variants_log = (tmp / "ledger" / "variants.jsonl").read_text(encoding="utf-8")
             self.assertIn("fix callable", variants_log)
             self.assertIn("second round improvement", variants_log)
+            proposals_log = (tmp / "ledger" / "proposals.jsonl").read_text(encoding="utf-8")
+            self.assertIn('"status":"accepted"', proposals_log)
+            self.assertIn('"status":"rejected_exact_duplicate"', proposals_log)
 
             trace_payload = json.loads(Path(trace["trace_path"]).read_text(encoding="utf-8"))
             self.assertEqual(trace_payload["rounds_completed"], 2)

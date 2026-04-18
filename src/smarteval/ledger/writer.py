@@ -3,14 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from smarteval.core.models import BakeoffConfig, LedgerVariantRecord, LedgerVerdictRecord, Variant, VariantProposal, Verdict
+from smarteval.core.models import BakeoffConfig, LedgerVariantRecord, LedgerVerdictRecord, ProposalAttemptRecord, Variant, VariantProposal, Verdict
 from smarteval.ledger.reader import read_jsonl
+from smarteval.proposer.dedup import ProposalReview
 
 
 def ensure_ledger_layout(project_root: str | Path) -> Path:
     root = Path(project_root)
     ledger_dir = root / "ledger"
     (ledger_dir / "notes").mkdir(parents=True, exist_ok=True)
+    (ledger_dir / "proposals.jsonl").touch(exist_ok=True)
     (ledger_dir / "variants.jsonl").touch(exist_ok=True)
     (ledger_dir / "verdicts.jsonl").touch(exist_ok=True)
     return ledger_dir
@@ -77,6 +79,36 @@ def append_materialized_proposals(
                 rationale=proposal.rationale,
                 diff=proposal.diff,
                 created_at=datetime.now(timezone.utc),
+            )
+            handle.write(record.model_dump_json() + "\n")
+
+
+def append_proposal_attempts(
+    project_root: str | Path,
+    reviews: list[ProposalReview],
+    *,
+    source_run_dir: str | None = None,
+    materialized_variants: list[Variant] | None = None,
+) -> None:
+    ledger_dir = ensure_ledger_layout(project_root)
+    proposals_path = ledger_dir / "proposals.jsonl"
+    accepted_variants = iter(materialized_variants or [])
+    created_at = datetime.now(timezone.utc)
+    with proposals_path.open("a", encoding="utf-8") as handle:
+        for index, review in enumerate(reviews, start=1):
+            materialized_variant = next(accepted_variants, None) if review.status == "accepted" else None
+            record = ProposalAttemptRecord(
+                proposal_id=f"proposal-{created_at.strftime('%Y%m%d%H%M%S%f')}-{index}",
+                source_run_dir=source_run_dir,
+                parent_variant_id=review.proposal.parent_variant_id,
+                materialized_variant_id=materialized_variant.id if materialized_variant is not None else None,
+                status=review.status,
+                rationale=review.proposal.rationale,
+                expected_slice=review.proposal.expected_slice,
+                diff=review.proposal.diff,
+                duplicate_of_variant_id=review.duplicate_of_variant_id,
+                similarity=review.similarity,
+                created_at=created_at,
             )
             handle.write(record.model_dump_json() + "\n")
 

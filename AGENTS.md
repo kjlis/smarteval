@@ -43,6 +43,7 @@ This repository is a Python eval framework with a CLI-first workflow. Keep chang
 - `README.md` for quick start and common commands
 - `docs/configuration.md` for config schema and defaults
 - `docs/cli.md` for command behavior
+- `docs/graph.md` for graph-oriented history and visualization inputs
 - `docs/scoring-and-gates.md` for summary outputs and evaluator behavior
 - `docs/pipelines-and-asr.md` for manifest-backed pipeline behavior
 - `docs/optimization.md` for proposer and ledger behavior

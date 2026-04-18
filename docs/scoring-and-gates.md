@@ -99,3 +99,10 @@ step shows:
 - delta vs the immediate parent
 - cumulative delta vs baseline
 - the evaluator's overall justification from `llm_rubric`, when present
+
+Failed branches are also visible in `summary.json` through:
+
+- `failed_run_count`
+- `sample_errors`
+
+That makes it easier to annotate graph nodes that ran but never produced a valid artifact or score.

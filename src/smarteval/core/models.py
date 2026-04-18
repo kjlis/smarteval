@@ -213,6 +213,20 @@ class LedgerVariantRecord(BaseModel):
     created_at: datetime
 
 
+class ProposalAttemptRecord(BaseModel):
+    proposal_id: str
+    source_run_dir: str | None = None
+    parent_variant_id: str
+    materialized_variant_id: str | None = None
+    status: Literal["accepted", "rejected_exact_duplicate", "rejected_semantic_duplicate"]
+    rationale: str
+    expected_slice: str | None = None
+    diff: dict[str, Any] = Field(default_factory=dict)
+    duplicate_of_variant_id: str | None = None
+    similarity: float | None = None
+    created_at: datetime
+
+
 class LedgerVerdictRecord(BaseModel):
     variant_id: str
     parent_variant_id: str | None = None
@@ -282,6 +296,8 @@ class VariantSummary(BaseModel):
     mean_score_ci_high: float | None = None
     mean_cost_usd: float = 0.0
     mean_duration_ms: float = 0.0
+    failed_run_count: int = 0
+    sample_errors: list[str] = Field(default_factory=list)
     delta_vs_baseline: float | None = None
     delta_ci_low: float | None = None
     delta_ci_high: float | None = None
