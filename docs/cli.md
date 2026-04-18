@@ -3,25 +3,25 @@
 ## Common Commands
 
 ```bash
-smarteval init
-smarteval validate-config
-smarteval estimate
-smarteval run
-smarteval resume <run_dir>
-smarteval rescore <run_dir>
+smarteval init --path smarteval.yaml
+smarteval validate-config --path smarteval.yaml
+smarteval estimate --path smarteval.yaml
+smarteval run --path smarteval.yaml
+smarteval resume --path smarteval.yaml <run_dir>
+smarteval rescore --path smarteval.yaml <run_dir>
 smarteval diff <run_dir_a> <run_dir_b>
-smarteval log
-smarteval verdict <run_id>
-smarteval propose <run_dir>
-smarteval try-new-model <model_id>
-smarteval rebaseline <run_dir> --from OLD --to NEW
-smarteval doctor
+smarteval log --path smarteval.yaml
+smarteval verdict --path smarteval.yaml <run_id>
+smarteval propose --path smarteval.yaml <run_dir>
+smarteval try-new-model <model_id> --path smarteval.yaml
+smarteval rebaseline --path smarteval.yaml <run_dir> --from OLD --to NEW
+smarteval doctor --path smarteval.yaml
 ```
 
 ## `run`
 
 ```bash
-smarteval run --variant baseline --tag math --case-pattern 'math-*'
+smarteval run --path examples/basic_text/smarteval.yaml --variant baseline --tag math --case-pattern 'math-*'
 ```
 
 Behavior:
@@ -38,6 +38,15 @@ Reads `runs/<bakeoff>/by_case/`, finds missing cells, and runs only those.
 ## `rescore`
 
 Re-executes only the scoring pipeline against stored artifacts. Useful for rubric changes and evaluator rotation checks.
+
+Typical usage:
+
+```bash
+smarteval rescore --path smarteval.yaml runs/<bakeoff-dir>
+```
+
+If your pipeline contains `llm_rubric`, the default evaluator backend is the local Codex app-server.
+Override a stage with `backend: openai` only when you explicitly want the OpenAI Responses API.
 
 ## `verdict`
 
@@ -66,7 +75,7 @@ This command is for generator swaps only. It is not an evaluator migration path.
 Use:
 
 ```bash
-smarteval rebaseline <run_dir> --from gpt-5-mini --to gpt-5.2
+smarteval rebaseline --path smarteval.yaml <run_dir> --from gpt-5-mini --to gpt-5.2
 ```
 
 for evaluator changes.

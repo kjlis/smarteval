@@ -20,12 +20,19 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
+If you want to use the default local Codex-backed `llm_rubric` scorer, also install the
+experimental Codex Python SDK from a local `openai/codex` checkout:
+
+```bash
+/path/to/smarteval/.venv/bin/pip install -e /path/to/openai-codex/sdk/python
+```
+
 Initialize a project:
 
 ```bash
 smarteval init
-smarteval validate-config
-smarteval run
+smarteval validate-config --path smarteval.yaml
+smarteval run --path smarteval.yaml
 ```
 
 Inspect a run:
@@ -55,20 +62,40 @@ The ASR example shows the intended v1 pattern:
 - `artifact_selection.primary_output` picks the evaluated output
 - sibling outputs are copied into `runs/.../attachments/` when enabled
 
+To score deterministic ASR note outputs with the default local Codex evaluator, add an
+`llm_rubric` stage to your config:
+
+```yaml
+pipeline:
+  - id: note_quality
+    kind: llm_rubric
+    rubric: rubrics/note_quality.yaml
+    # Optional if `codex` is not on PATH:
+    # codex_bin: /opt/homebrew/bin/codex
+```
+
+Then run:
+
+```bash
+smarteval validate-config --path examples/asr_manifest/smarteval.yaml
+smarteval estimate --path examples/asr_manifest/smarteval.yaml
+smarteval run --path examples/asr_manifest/smarteval.yaml --output-root runs
+```
+
 ## CLI
 
 ```bash
-smarteval validate-config
-smarteval estimate
-smarteval run [--variant ID] [--tag TAG] [--case-pattern GLOB] [--dry-run]
-smarteval resume <run_dir>
-smarteval rescore <run_dir>
+smarteval validate-config --path smarteval.yaml
+smarteval estimate --path smarteval.yaml
+smarteval run --path smarteval.yaml [--variant ID] [--tag TAG] [--case-pattern GLOB] [--dry-run]
+smarteval resume --path smarteval.yaml <run_dir>
+smarteval rescore --path smarteval.yaml <run_dir>
 smarteval diff <run_dir_a> <run_dir_b>
-smarteval propose <run_dir>
-smarteval verdict <run_id>
-smarteval try-new-model <model_id>
-smarteval rebaseline <run_dir> --from OLD --to NEW
-smarteval doctor
+smarteval propose --path smarteval.yaml <run_dir>
+smarteval verdict --path smarteval.yaml <run_id>
+smarteval try-new-model <model_id> --path smarteval.yaml
+smarteval rebaseline --path smarteval.yaml <run_dir> --from OLD --to NEW
+smarteval doctor --path smarteval.yaml
 ```
 
 ## Notes
@@ -76,3 +103,4 @@ smarteval doctor
 - `try-new-model` is for generator swaps only. Evaluator changes must go through `rebaseline`.
 - `rescore` reuses stored artifacts instead of rerunning generators.
 - Project-level evaluator locks live under `.smarteval/lock.json`.
+- A successful `llm_rubric` run is: golden case loaded -> generator produces artifact -> Codex scores the selected artifact.
