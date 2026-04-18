@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>smarteval optimization graph</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262a33;
+    --text: #e7e9ee;
+    --muted: #8b92a3;
+    --accent: #f7b731;
+    --good: #4ade80;
+    --bad: #f87171;
+    --neutral: #6b7280;
+    --link: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 220px 1fr 460px; height: 100vh; }
+  header.topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  header.topbar h1 { font-size: 14px; margin: 0; font-weight: 600; }
+  header.topbar .meta { color: var(--muted); font-size: 12px; }
+  header.topbar .spacer { flex: 1; }
+  header.topbar .badge { background: var(--border); padding: 3px 8px; border-radius: 12px; font-size: 12px; color: var(--muted); }
+  aside.sidebar { padding: 12px 14px; border-right: 1px solid var(--border); background: var(--panel); overflow-y: auto; }
+  aside.sidebar h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+  aside.sidebar label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; cursor: pointer; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 3px 0; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; }
+  .swatch.winner { background: var(--accent); }
+  .swatch.good { background: var(--good); }
+  .swatch.bad { background: var(--bad); }
+  .swatch.neutral { background: var(--neutral); }
+  .swatch.baseline { background: transparent; border: 2px solid var(--link); }
+  .swatch.rejected { background: #262a33; border: 1px dashed var(--bad); }
+  .legend-row .edge-line { width: 22px; height: 0; border-top: 3px solid var(--accent); }
+  .legend-row .edge-line.accepted { border-top: 1.5px solid var(--neutral); }
+  .legend-row .edge-line.rejected { border-top: 1.5px dashed var(--bad); }
+  #graph { position: relative; background: radial-gradient(ellipse at top, #151922, #0f1115 70%); }
+  aside.inspector { border-left: 1px solid var(--border); background: var(--panel); overflow-y: auto; padding: 14px 16px; }
+  .empty-hint { color: var(--muted); margin-top: 20px; text-align: center; }
+  .section { margin-bottom: 18px; }
+  .section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .id-line { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; color: var(--text); background: #0f1115; border: 1px solid var(--border); padding: 6px 8px; border-radius: 4px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--border); color: var(--muted); }
+  .pill.winner { background: rgba(247, 183, 49, 0.18); color: var(--accent); border: 1px solid rgba(247, 183, 49, 0.4); }
+  .pill.regression { background: rgba(248, 113, 113, 0.14); color: var(--bad); border: 1px solid rgba(248, 113, 113, 0.35); }
+  .pill.good { background: rgba(74, 222, 128, 0.14); color: var(--good); border: 1px solid rgba(74, 222, 128, 0.35); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .field-path { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--link); }
+  .before, .after { font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .before { color: var(--muted); }
+  .after { color: var(--text); }
+  details { border: 1px solid var(--border); border-radius: 4px; margin: 8px 0; }
+  details > summary { padding: 6px 10px; cursor: pointer; font-size: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] > summary { border-bottom: 1px solid var(--border); }
+  details > .details-body { padding: 8px 10px; }
+  pre.artifact { white-space: pre-wrap; background: #0f1115; border: 1px solid var(--border); border-radius: 4px; padding: 10px; font-family: ui-monospace, monospace; font-size: 11.5px; max-height: 320px; overflow: auto; margin: 0; }
+  .rubric-dim { border-top: 1px solid var(--border); padding: 6px 0; }
+  .rubric-dim:first-child { border-top: none; }
+  .rubric-dim .hdr { display: flex; justify-content: space-between; font-size: 12px; }
+  .rubric-dim .just { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .rationale { color: var(--text); font-size: 13px; white-space: pre-wrap; }
+  .parent-link { color: var(--link); cursor: pointer; text-decoration: underline; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: #0f1115; border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; }
+  .stat .label { color: var(--muted); font-size: 11px; }
+  .stat .value { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .nowrap { white-space: nowrap; }
+  .small-muted { font-size: 11px; color: var(--muted); margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <h1>smarteval · optimization graph</h1>
+    <span class="badge" id="meta-variants">0 variants</span>
+    <span class="badge" id="meta-bakeoffs">0 bakeoffs</span>
+    <span class="badge" id="meta-winner">no winner</span>
+    <span class="spacer"></span>
+    <span class="meta" id="meta-project"></span>
+  </header>
+  <aside class="sidebar">
+    <h2>Filters</h2>
+    <label><input type="checkbox" id="toggle-rejected" checked /> show rejected proposals</label>
+    <label><input type="checkbox" id="toggle-all-traces" /> highlight all improvement traces</label>
+    <label><input type="checkbox" id="toggle-fit" checked /> auto-fit on load</label>
+
+    <h2>Legend — nodes</h2>
+    <div class="legend-row"><span class="swatch baseline"></span> baseline</div>
+    <div class="legend-row"><span class="swatch winner"></span> winner path</div>
+    <div class="legend-row"><span class="swatch good"></span> improved vs baseline</div>
+    <div class="legend-row"><span class="swatch bad"></span> regressed vs baseline</div>
+    <div class="legend-row"><span class="swatch neutral"></span> no score yet</div>
+    <div class="legend-row"><span class="swatch rejected"></span> rejected proposal</div>
+
+    <h2>Legend — edges</h2>
+    <div class="legend-row"><span class="edge-line"></span> winner path</div>
+    <div class="legend-row"><span class="edge-line accepted"></span> accepted child</div>
+    <div class="legend-row"><span class="edge-line rejected"></span> rejected proposal</div>
+
+    <h2>Tips</h2>
+    <div class="muted" style="font-size:12px">Scroll to zoom · drag to pan · click a node to inspect · click empty space to deselect.</div>
+  </aside>
+  <section id="graph"></section>
+  <aside class="inspector" id="inspector"></aside>
+</div>
+
+<script id="graph-data" type="application/json">{{DATA_JSON}}</script>
+<script>
+(function () {
+  const rawEl = document.getElementById("graph-data");
+  const DATA = JSON.parse(rawEl.textContent);
+
+  // ---------- DOM helpers (no innerHTML) ----------
+  function h(tag, props, children) {
+    const el = document.createElement(tag);
+    if (props) {
+      for (const key of Object.keys(props)) {
+        const val = props[key];
+        if (val == null) continue;
+        if (key === "class") el.className = val;
+        else if (key === "dataset") Object.assign(el.dataset, val);
+        else if (key === "style" && typeof val === "object") Object.assign(el.style, val);
+        else if (key.startsWith("on") && typeof val === "function") el.addEventListener(key.slice(2), val);
+        else if (key === "text") el.textContent = val;
+        else el.setAttribute(key, val);
+      }
+    }
+    if (children) {
+      for (const c of [].concat(children)) {
+        if (c == null || c === false) continue;
+        if (typeof c === "string" || typeof c === "number") el.appendChild(document.createTextNode(String(c)));
+        else el.appendChild(c);
+      }
+    }
+    return el;
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  // ---------- top bar ----------
+  document.getElementById("meta-variants").textContent = `${DATA.meta.variant_count} variants`;
+  document.getElementById("meta-bakeoffs").textContent = `${DATA.meta.bakeoff_count} bakeoffs`;
+  document.getElementById("meta-project").textContent = DATA.meta.project_root;
+  const winner = DATA.winner_path;
+  const winnerLabel = winner && winner.total_delta_vs_baseline != null
+    ? `winner Δ +${Number(winner.total_delta_vs_baseline).toFixed(2)}`
+    : (winner ? "winner (no Δ)" : "no winner");
+  document.getElementById("meta-winner").textContent = winnerLabel;
+
+  // ---------- indexes ----------
+  const variantById = new Map(DATA.variants.map(v => [v.id, v]));
+  const rejectedById = new Map(DATA.rejected_proposals.map(p => [p.id, p]));
+  const winnerNodes = new Set((winner && winner.node_ids) || []);
+  const winnerEdges = new Set(((winner && winner.edge_pairs) || []).map(p => p.join("→")));
+  const allTraceNodes = new Set();
+  const allTraceEdges = new Set();
+  for (const t of DATA.all_traces || []) {
+    for (const n of t.node_ids || []) allTraceNodes.add(n);
+    for (const p of t.edge_pairs || []) allTraceEdges.add(p.join("→"));
+  }
+
+  // ---------- formatting ----------
+  function shortId(id) {
+    if (!id) return "";
+    if (id === "baseline") return "baseline";
+    const parts = id.split("-proposal-");
+    return "…-proposal-" + parts[parts.length - 1];
+  }
+  function shortVariantTail(id) {
+    const parts = id.split("-proposal-");
+    const last = parts[parts.length - 1];
+    return last.length > 8 ? last.slice(-8) : last;
+  }
+  function colorForDelta(d) {
+    if (d == null || isNaN(d)) return "#6b7280";
+    if (d > 0.05) return "#4ade80";
+    if (d > 0.0) return "#86efac";
+    if (d > -0.05) return "#9ca3af";
+    return "#f87171";
+  }
+  function fmtScore(v) { return (v == null || isNaN(v)) ? "—" : Number(v).toFixed(3); }
+  function fmtDelta(v) {
+    if (v == null || isNaN(v)) return "—";
+    const sign = v > 0 ? "+" : "";
+    return sign + Number(v).toFixed(3);
+  }
+  function formatValue(v) {
+    if (v === null || v === undefined) return "—";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  }
+
+  // ---------- nodes / edges ----------
+  const cyNodes = [];
+  const cyEdges = [];
+
+  for (const v of DATA.variants) {
+    const delta = v.best_delta_vs_baseline;
+    const isTerminalWinner = winner && v.id === winner.target_variant_id;
+    cyNodes.push({
+      data: {
+        id: v.id,
+        kind: "variant",
+        label: v.is_baseline ? "baseline" : `r${v.round || "?"} · ${shortVariantTail(v.id)}`,
+        color: v.is_baseline ? "#1f2937" : colorForDelta(delta),
+        border: v.is_baseline ? "#60a5fa" : (isTerminalWinner ? "#f7b731" : "#262a33"),
+      },
+      classes: [
+        v.is_baseline ? "baseline" : "variant",
+        winnerNodes.has(v.id) ? "on-winner" : "",
+        isTerminalWinner ? "terminal-winner" : "",
+      ].filter(Boolean).join(" "),
+    });
+  }
+
+  for (const p of DATA.rejected_proposals) {
+    cyNodes.push({
+      data: { id: p.id, kind: "rejected", label: `rejected · ${(p.status || "").replace("rejected_", "")}`, color: "#262a33", border: "#f87171" },
+      classes: "rejected",
+    });
+  }
+
+  for (const e of DATA.edges) {
+    const isWinner = winnerEdges.has(`${e.from}→${e.to}`);
+    cyEdges.push({
+      data: {
+        id: `${e.from}__${e.to}`,
+        source: e.from,
+        target: e.to,
+        kind: e.kind,
+        onAnyTrace: allTraceEdges.has(`${e.from}→${e.to}`),
+      },
+      classes: [
+        e.kind === "rejected" ? "rejected-edge" : "accepted-edge",
+        isWinner ? "on-winner" : "",
+      ].filter(Boolean).join(" "),
+    });
+  }
+
+  // ---------- cytoscape ----------
+  const cy = cytoscape({
+    container: document.getElementById("graph"),
+    elements: [...cyNodes, ...cyEdges],
+    wheelSensitivity: 0.25,
+    style: [
+      {
+        selector: "node",
+        style: {
+          "label": "data(label)",
+          "background-color": "data(color)",
+          "border-color": "data(border)",
+          "border-width": 1.5,
+          "color": "#e7e9ee",
+          "font-size": 10,
+          "text-valign": "bottom",
+          "text-margin-y": 6,
+          "text-outline-color": "#0f1115",
+          "text-outline-width": 2,
+          "width": 28,
+          "height": 28,
+        },
+      },
+      { selector: "node.baseline", style: { "width": 44, "height": 44, "border-width": 2.5, "font-size": 12 } },
+      { selector: "node.rejected", style: { "shape": "rectangle", "background-color": "#262a33", "border-color": "#f87171", "border-style": "dashed", "width": 22, "height": 22 } },
+      { selector: "node.on-winner", style: { "border-color": "#f7b731", "border-width": 3 } },
+      {
+        selector: "node.terminal-winner",
+        style: {
+          "border-color": "#f7b731",
+          "border-width": 4,
+          "width": 40,
+          "height": 40,
+          "shadow-blur": 18,
+          "shadow-color": "#f7b731",
+          "shadow-opacity": 0.9,
+        },
+      },
+      { selector: "node:selected", style: { "border-color": "#60a5fa", "border-width": 3 } },
+      {
+        selector: "edge",
+        style: {
+          "curve-style": "bezier",
+          "target-arrow-shape": "triangle",
+          "arrow-scale": 0.8,
+          "line-color": "#3b4051",
+          "target-arrow-color": "#3b4051",
+          "width": 1.2,
+        },
+      },
+      { selector: "edge.rejected-edge", style: { "line-style": "dashed", "line-color": "#f87171", "target-arrow-color": "#f87171" } },
+      {
+        selector: "edge.on-winner",
+        style: { "line-color": "#f7b731", "target-arrow-color": "#f7b731", "width": 3.4, "z-index": 10 },
+      },
+      { selector: ".dimmed", style: { "opacity": 0.2 } },
+    ],
+    layout: {
+      name: "dagre",
+      rankDir: "TB",
+      nodeSep: 50,
+      rankSep: 80,
+      edgeSep: 10,
+    },
+  });
+
+  cy.ready(() => {
+    if (document.getElementById("toggle-fit").checked) cy.fit(undefined, 40);
+  });
+
+  cy.on("tap", "node", (evt) => {
+    const node = evt.target;
+    renderInspector(node.id(), node.data("kind"));
+  });
+  cy.on("tap", (evt) => {
+    if (evt.target === cy) {
+      renderEmptyInspector();
+      cy.$(":selected").unselect();
+    }
+  });
+
+  document.getElementById("toggle-rejected").addEventListener("change", (e) => {
+    const show = e.target.checked;
+    cy.$("node.rejected, edge.rejected-edge").style("display", show ? "element" : "none");
+  });
+  document.getElementById("toggle-all-traces").addEventListener("change", (e) => {
+    if (e.target.checked) {
+      cy.nodes().forEach(n => { if (!allTraceNodes.has(n.id()) && !n.hasClass("rejected") && !n.hasClass("baseline")) n.addClass("dimmed"); });
+      cy.edges().forEach(ed => { if (!ed.data("onAnyTrace")) ed.addClass("dimmed"); });
+    } else {
+      cy.elements().removeClass("dimmed");
+    }
+  });
+
+  // ---------- inspector ----------
+  const inspector = document.getElementById("inspector");
+
+  function renderEmptyInspector() {
+    clear(inspector);
+    inspector.appendChild(h("div", { class: "empty-hint", text: "Click a node to inspect" }));
+  }
+
+  function renderInspector(id, kind) {
+    if (kind === "rejected") renderRejected(rejectedById.get(id));
+    else renderVariant(variantById.get(id));
+  }
+
+  function pill(text, cls) { return h("span", { class: "pill" + (cls ? " " + cls : ""), text }); }
+  function deltaPill(v) {
+    if (v == null) return null;
+    if (v > 0.01) return pill(`Δ ${fmtDelta(v)}`, "good");
+    if (v < -0.01) return pill(`Δ ${fmtDelta(v)}`, "regression");
+    return pill(`Δ ${fmtDelta(v)}`);
+  }
+  function statBox(label, value) {
+    return h("div", { class: "stat" }, [
+      h("div", { class: "label", text: label }),
+      h("div", { class: "value", text: value }),
+    ]);
+  }
+  function section(title, body) {
+    const kids = [h("h3", { text: title })];
+    return h("div", { class: "section" }, kids.concat([].concat(body || [])));
+  }
+  function parentLinkEl(targetId) {
+    if (!targetId) return h("span", { class: "muted", text: "—" });
+    return h("span", { class: "parent-link", dataset: { variant: targetId }, text: shortId(targetId), onclick: () => {
+      if (variantById.has(targetId)) renderVariant(variantById.get(targetId));
+      else if (rejectedById.has(targetId)) renderRejected(rejectedById.get(targetId));
+    } });
+  }
+
+  function renderVariant(v) {
+    clear(inspector);
+    if (!v) { renderEmptyInspector(); return; }
+    const isTerminalWinner = winner && v.id === winner.target_variant_id;
+    const isOnWinner = winnerNodes.has(v.id);
+
+    // header
+    const pills = [];
+    if (v.is_baseline) pills.push(pill("baseline"));
+    if (isTerminalWinner) pills.push(pill("★ winner", "winner"));
+    else if (isOnWinner) pills.push(pill("on winner path", "winner"));
+    if (v.round) pills.push(pill(`round ${v.round}`));
+    if (v.hypothesis) pills.push(pill(v.hypothesis));
+    const dp = deltaPill(v.best_delta_vs_baseline);
+    if (dp) pills.push(dp);
+
+    inspector.appendChild(section("variant", [
+      h("div", { class: "id-line", text: v.id }),
+      h("div", { class: "pill-row" }, pills),
+    ]));
+
+    inspector.appendChild(h("div", { class: "section stat-grid" }, [
+      statBox("mean score (best run)", fmtScore(v.best_mean_score)),
+      statBox("Δ vs baseline (best)", fmtDelta(v.best_delta_vs_baseline)),
+      statBox("round", v.round ? String(v.round) : "—"),
+      statBox("author", v.author || "—"),
+    ]));
+
+    inspector.appendChild(section("parent", parentLinkEl(v.parent_id)));
+
+    if (v.description) inspector.appendChild(section("description", h("div", { class: "rationale", text: v.description })));
+    if (v.rationale) inspector.appendChild(section("rationale", h("div", { class: "rationale", text: v.rationale })));
+
+    if (v.diff_changes && v.diff_changes.length) {
+      const thead = h("thead", null, h("tr", null, [
+        h("th", { text: "field" }),
+        h("th", { text: "before" }),
+        h("th", { text: "after" }),
+      ]));
+      const tbody = h("tbody");
+      for (const c of v.diff_changes) {
+        tbody.appendChild(h("tr", null, [
+          h("td", null, h("span", { class: "field-path", text: c.field_path })),
+          h("td", null, h("span", { class: "before", text: formatValue(c.before) })),
+          h("td", null, h("span", { class: "after", text: formatValue(c.after) })),
+        ]));
+      }
+      inspector.appendChild(section("diff vs parent", h("table", null, [thead, tbody])));
+    }
+
+    if (v.scores_by_bakeoff && v.scores_by_bakeoff.length) {
+      const thead = h("thead", null, h("tr", null, [
+        h("th", { text: "bakeoff" }),
+        h("th", { class: "num", text: "mean" }),
+        h("th", { class: "num", text: "Δ" }),
+        h("th", { class: "num", text: "pass" }),
+        h("th", { class: "num", text: "failed" }),
+      ]));
+      const tbody = h("tbody");
+      for (const s of v.scores_by_bakeoff) {
+        tbody.appendChild(h("tr", null, [
+          h("td", { class: "nowrap" }, h("span", { class: "field-path", text: s.bakeoff_id })),
+          h("td", { class: "num", text: fmtScore(s.mean_score) }),
+          h("td", { class: "num", text: fmtDelta(s.delta_vs_baseline) }),
+          h("td", { class: "num", text: s.pass_rate == null ? "—" : (Number(s.pass_rate) * 100).toFixed(0) + "%" }),
+          h("td", { class: "num", text: String(s.failed_run_count ?? 0) }),
+        ]));
+      }
+      inspector.appendChild(section("scores by bakeoff", h("table", null, [thead, tbody])));
+    }
+
+    if (v.case_runs && v.case_runs.length) {
+      const wrap = h("div");
+      for (const cr of v.case_runs) {
+        wrap.appendChild(renderCaseRun(cr));
+      }
+      inspector.appendChild(section("case artifacts", wrap));
+    }
+
+    cy.$(":selected").unselect();
+    const node = cy.getElementById(v.id);
+    if (node && node.length) {
+      node.select();
+      cy.animate({ center: { eles: node }, duration: 180 });
+    }
+  }
+
+  function renderCaseRun(cr) {
+    const top = cr.scores && cr.scores[0];
+    const scoreStr = top ? fmtScore(top.value) : "—";
+    const summary = h("summary", null, [
+      h("span", { text: `${cr.case_id || "case"} · ${cr.bakeoff_id}` }),
+      h("span", { class: "muted", text: `${cr.status || ""} · score ${scoreStr}` }),
+    ]);
+    const body = h("div", { class: "details-body" });
+    if (cr.error) {
+      body.appendChild(h("div", { class: "pill regression", text: "error" }));
+      body.appendChild(h("pre", { class: "artifact", text: cr.error }));
+    }
+    if (cr.artifact_payload) {
+      body.appendChild(h("div", { class: "small-muted", text: "generated artifact" }));
+      body.appendChild(h("pre", { class: "artifact", text: cr.artifact_payload }));
+    }
+    if (top && top.overall_justification) {
+      body.appendChild(h("div", { class: "small-muted", text: "judge overall" }));
+      body.appendChild(h("div", { class: "rationale", text: top.overall_justification }));
+    }
+    if (top && top.rubric_dimensions && top.rubric_dimensions.length) {
+      body.appendChild(h("div", { class: "small-muted", text: "rubric dimensions" }));
+      for (const d of top.rubric_dimensions) {
+        const hdr = h("div", { class: "hdr" }, [
+          h("span", { class: "field-path", text: d.id }),
+          h("span", { text: `${d.score}${d.failure_mode ? " · " + d.failure_mode : ""}` }),
+        ]);
+        body.appendChild(h("div", { class: "rubric-dim" }, [hdr, h("div", { class: "just", text: d.justification || "" })]));
+      }
+    }
+    if (cr.case_expected && cr.case_expected.answer) {
+      const expSummary = h("summary", null, [
+        h("span", { text: "expected answer" }),
+        h("span", { class: "muted", text: "click to expand" }),
+      ]);
+      const expBody = h("div", { class: "details-body" }, h("pre", { class: "artifact", text: cr.case_expected.answer }));
+      body.appendChild(h("details", { style: { marginTop: "10px" } }, [expSummary, expBody]));
+    }
+    return h("details", null, [summary, body]);
+  }
+
+  function renderRejected(p) {
+    clear(inspector);
+    if (!p) { renderEmptyInspector(); return; }
+    const pills = [pill(p.status, "regression")];
+    if (p.similarity != null) pills.push(pill(`similarity ${Number(p.similarity).toFixed(3)}`));
+    inspector.appendChild(section("rejected proposal", [
+      h("div", { class: "id-line", text: p.id }),
+      h("div", { class: "pill-row" }, pills),
+    ]));
+    inspector.appendChild(section("parent", parentLinkEl(p.parent_variant_id)));
+    if (p.duplicate_of_variant_id) inspector.appendChild(section("duplicate of", parentLinkEl(p.duplicate_of_variant_id)));
+    if (p.rationale) inspector.appendChild(section("rationale", h("div", { class: "rationale", text: p.rationale })));
+    if (p.diff) inspector.appendChild(section("proposed diff", h("pre", { class: "artifact", text: JSON.stringify(p.diff, null, 2) })));
+  }
+
+  // initial render: open winner if present
+  if (winner && winner.target_variant_id && variantById.has(winner.target_variant_id)) {
+    renderVariant(variantById.get(winner.target_variant_id));
+  } else {
+    renderEmptyInspector();
+  }
+})();
+</script>
+</body>
+</html>

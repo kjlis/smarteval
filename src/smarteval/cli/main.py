@@ -29,6 +29,7 @@ from smarteval.ledger.writer import append_materialized_proposals, append_propos
 from smarteval.proposer.context import build_proposer_context
 from smarteval.proposer.materialize import materialize_proposals
 from smarteval.proposer.prompter import propose_variants_with_reviews
+from smarteval.reporting.graph_report import build_report as build_graph_report
 
 app = typer.Typer(help="smarteval command line interface.")
 
@@ -322,6 +323,20 @@ def _run_preflight(config, *, tags: list[str], case_pattern: str | None) -> dict
         "estimated_generator_calls": len(filtered_cases) * generator_calls * config.execution.runs_per_variant,
         "estimated_evaluator_calls": len(filtered_cases) * evaluator_calls * len(config.variants) * config.execution.runs_per_variant,
     }
+
+
+@app.command("graph-report")
+def graph_report(
+    project_root: Path = typer.Argument(Path("."), help="Project root containing .smarteval/"),
+    output: Path = typer.Option(Path("graph-report.html"), "--output", "-o", help="Output HTML path"),
+    open_in_browser: bool = typer.Option(False, "--open", help="Open the report in the default browser after writing"),
+) -> None:
+    """Render an interactive DAG report for a .smarteval directory."""
+    out_path = build_graph_report(project_root, output)
+    typer.echo(f"Wrote {out_path}")
+    if open_in_browser:
+        import webbrowser
+        webbrowser.open(out_path.as_uri())
 
 
 if __name__ == "__main__":
