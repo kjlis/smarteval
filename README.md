@@ -40,6 +40,14 @@ smarteval log
 - [examples/basic_text/smarteval.yaml](examples/basic_text/smarteval.yaml)
 - [examples/asr_manifest/smarteval.yaml](examples/asr_manifest/smarteval.yaml)
 
+## Docs
+
+- [docs/README.md](docs/README.md)
+- [docs/configuration.md](docs/configuration.md)
+- [docs/cli.md](docs/cli.md)
+- [docs/pipelines-and-asr.md](docs/pipelines-and-asr.md)
+- [docs/optimization.md](docs/optimization.md)
+
 The ASR example shows the intended v1 pattern:
 
 - a full external pipeline run is one generator invocation
