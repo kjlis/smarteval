@@ -1,0 +1,115 @@
+{
+  "config_path": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/smarteval.yaml",
+  "rounds_requested": 5,
+  "rounds_completed": 5,
+  "proposals_per_round": 3,
+  "proposer_backend": "codex_local",
+  "proposer_model": "gpt-5.4-mini",
+  "initial_run_dir": "runs/2026-04-18T12-05-40__2026-0",
+  "initial_best_variant_id": "baseline",
+  "initial_best_mean_score": 0.37,
+  "rounds": [
+    {
+      "round": 1,
+      "source_run_dir": "runs/2026-04-18T12-05-40__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418120606-1",
+        "baseline-proposal-20260418120606-2",
+        "baseline-proposal-20260418120606-3"
+      ],
+      "queued_run_dir": "runs/2026-04-18T12-06-06__2026-0",
+      "best_variant_id": "baseline",
+      "best_mean_score": 0.39999999999999997
+    },
+    {
+      "round": 2,
+      "source_run_dir": "runs/2026-04-18T12-06-06__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline",
+        "baseline",
+        "baseline"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418120722-1",
+        "baseline-proposal-20260418120722-2",
+        "baseline-proposal-20260418120722-3"
+      ],
+      "queued_run_dir": "runs/2026-04-18T12-07-22__2026-0",
+      "best_variant_id": "baseline-proposal-20260418120722-1",
+      "best_mean_score": 1.0
+    },
+    {
+      "round": 3,
+      "source_run_dir": "runs/2026-04-18T12-07-22__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline-proposal-20260418120722-1",
+        "baseline-proposal-20260418120722-1",
+        "baseline-proposal-20260418120722-1"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-1",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-3"
+      ],
+      "queued_run_dir": "runs/2026-04-18T12-08-13__2026-0",
+      "best_variant_id": "baseline-proposal-20260418120722-1-proposal-20260418120813-2",
+      "best_mean_score": 1.0
+    },
+    {
+      "round": 4,
+      "source_run_dir": "runs/2026-04-18T12-08-13__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-1",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-3"
+      ],
+      "queued_run_dir": "runs/2026-04-18T12-08-55__2026-0",
+      "best_variant_id": "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2",
+      "best_mean_score": 1.0
+    },
+    {
+      "round": 5,
+      "source_run_dir": "runs/2026-04-18T12-08-55__2026-0",
+      "proposal_count": 3,
+      "rejected_proposal_count": 0,
+      "proposal_parent_ids": [
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2"
+      ],
+      "status": "completed",
+      "queued_variant_ids": [
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2-proposal-20260418120951-1",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2-proposal-20260418120951-2",
+        "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2-proposal-20260418120951-3"
+      ],
+      "queued_run_dir": "runs/2026-04-18T12-09-51__2026-0",
+      "best_variant_id": "baseline-proposal-20260418120722-1-proposal-20260418120813-2-proposal-20260418120855-2-proposal-20260418120951-1",
+      "best_mean_score": 1.0
+    }
+  ],
+  "final_run_dir": "runs/2026-04-18T12-09-51__2026-0",
+  "trace_path": "/Users/merowing/work/personal/smarteval/examples/asr_manifest/.smarteval/optimization-runs/2026-04-18T12-05-40.json"
+}
