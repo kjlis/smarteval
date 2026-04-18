@@ -5,6 +5,7 @@ from typing import Any
 
 from smarteval.core.models import VariantProposal
 from smarteval.core.openai_client import build_openai_client
+from smarteval.proposer.dedup import filter_duplicate_proposals
 
 
 def propose_variants(
@@ -15,6 +16,7 @@ def propose_variants(
     api_key: str | None = None,
     base_url: str | None = None,
     client: Any | None = None,
+    verdicts: list[dict] | None = None,
 ) -> list[VariantProposal]:
     openai_client = client or build_openai_client(api_key=api_key, base_url=base_url)
     prompt = (
@@ -29,4 +31,7 @@ def propose_variants(
         text={"format": {"type": "json_object"}},
     )
     payload = json.loads(response.output_text)
-    return [VariantProposal.model_validate(item) for item in payload.get("proposals", [])[:n]]
+    proposals = [VariantProposal.model_validate(item) for item in payload.get("proposals", [])[:n]]
+    if verdicts:
+        proposals = filter_duplicate_proposals(proposals, verdicts)
+    return proposals

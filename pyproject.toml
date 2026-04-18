@@ -24,6 +24,24 @@ dev = [
 [project.scripts]
 smarteval = "smarteval.cli.main:app"
 
+[project.entry-points."smarteval.generators"]
+openai = "smarteval.plugins.generators.openai:OpenAIGenerator"
+codex = "smarteval.plugins.generators.openai:CodexGenerator"
+script = "smarteval.plugins.generators.script:ScriptGenerator"
+pipeline = "smarteval.plugins.generators.pipeline:PipelineGenerator"
+
+[project.entry-points."smarteval.contracts"]
+json_schema = "smarteval.plugins.contracts.json_schema:JSONSchemaValidator"
+pydantic_model = "smarteval.plugins.contracts.pydantic_model:PydanticModelValidator"
+regex = "smarteval.plugins.contracts.regex:RegexValidator"
+length_bounds = "smarteval.plugins.contracts.length_bounds:LengthBoundsValidator"
+custom_predicate = "smarteval.plugins.contracts.custom_predicate:CustomPredicateValidator"
+
+[project.entry-points."smarteval.scorers"]
+exact_match = "smarteval.plugins.scorers.exact_match:ExactMatchScorer"
+regex_match = "smarteval.plugins.scorers.regex_match:RegexMatchScorer"
+llm_rubric = "smarteval.plugins.scorers.llm_rubric:LLMRubricScorer"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

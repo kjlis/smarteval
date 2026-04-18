@@ -29,3 +29,30 @@ def bootstrap_ci(
     lower_index = max(0, int(((1.0 - confidence) / 2.0) * len(boot)))
     upper_index = min(len(boot) - 1, int((1.0 - (1.0 - confidence) / 2.0) * len(boot)) - 1)
     return boot[lower_index], boot[upper_index]
+
+
+def paired_bootstrap_delta_ci(
+    baseline: list[float],
+    candidate: list[float],
+    *,
+    samples: int = 500,
+    confidence: float = 0.95,
+    seed: int = 17,
+) -> tuple[float | None, float | None]:
+    if not baseline or not candidate or len(baseline) != len(candidate):
+        return None, None
+    if len(baseline) == 1:
+        delta = candidate[0] - baseline[0]
+        return delta, delta
+
+    rng = random.Random(seed)
+    indices = list(range(len(baseline)))
+    boot = []
+    for _ in range(samples):
+        chosen = [rng.choice(indices) for _ in indices]
+        deltas = [candidate[index] - baseline[index] for index in chosen]
+        boot.append(mean(deltas))
+    boot.sort()
+    lower_index = max(0, int(((1.0 - confidence) / 2.0) * len(boot)))
+    upper_index = min(len(boot) - 1, int((1.0 - (1.0 - confidence) / 2.0) * len(boot)) - 1)
+    return boot[lower_index], boot[upper_index]

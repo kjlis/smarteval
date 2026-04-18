@@ -7,8 +7,9 @@ from pathlib import Path
 import typer
 
 from smarteval.core.config import load_config
-from smarteval.core.fingerprint import compute_evaluator_fingerprint
+from smarteval.core.model_swap import select_variants_for_model_try
 from smarteval.core.models import Verdict
+from smarteval.core.rebaseline import rebaseline_evaluator
 from smarteval.core.rescore import rescore_bakeoff
 from smarteval.core.runner import (
     compare_summaries,
@@ -129,25 +130,18 @@ def doctor(path: Path = Path("smarteval.yaml")) -> None:
 @app.command("rebaseline")
 def rebaseline(
     path: Path = Path("smarteval.yaml"),
+    run_dir: Path = typer.Argument(...),
     from_model: str = typer.Option(..., "--from"),
     to_model: str = typer.Option(..., "--to"),
     approve: bool = typer.Option(False),
 ) -> None:
-    config = load_config(path)
-    old_fp = compute_evaluator_fingerprint(config.evaluator)
-    config.evaluator.model = to_model
-    new_fp = compute_evaluator_fingerprint(config.evaluator)
-    payload = {
-        "from_model": from_model,
-        "to_model": to_model,
-        "old_fingerprint": old_fp,
-        "new_fingerprint": new_fp,
-        "approved": approve,
-    }
-    if approve:
-        lock_path = (config.project_root or Path.cwd()) / ".smarteval" / "lock.json"
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
-        lock_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    payload = rebaseline_evaluator(
+        path,
+        run_dir=run_dir,
+        from_model=from_model,
+        to_model=to_model,
+        approve=approve,
+    )
     typer.echo(json.dumps(payload, indent=2))
 
 
@@ -159,7 +153,8 @@ def try_new_model(
     output_root: Path = Path("runs"),
 ) -> None:
     config = load_config(path)
-    target_ids = {variant.id for variant in config.variants} if variants == "all" else set(variants.split(","))
+    ledger = read_ledger(config.project_root or Path.cwd())
+    target_ids = select_variants_for_model_try(config, ledger, variants)
     for variant in config.variants:
         if variant.id in target_ids and variant.generator.kind in {"openai", "codex"}:
             variant.generator.model = model_id
@@ -178,7 +173,13 @@ def propose(
     summary = read_summary(run_dir)
     records = list(load_run_records(run_dir).values())
     context = build_proposer_context(config, summary, records)
-    proposals = propose_variants(model=model or config.evaluator.model, context=context, n=n)
+    ledger = read_ledger(config.project_root or Path.cwd())
+    proposals = propose_variants(
+        model=model or config.evaluator.model,
+        context=context,
+        n=n,
+        verdicts=ledger["verdicts"],
+    )
     typer.echo(json.dumps([item.model_dump() for item in proposals], indent=2))
 
 

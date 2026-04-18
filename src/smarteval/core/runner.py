@@ -176,6 +176,7 @@ def summarize_runs(
         mean_score = mean_or_none(score_values)
         mean_score_ci = bootstrap_ci(score_values) if score_values else (None, None)
         delta = None if variant_id == baseline or mean_score is None or baseline_mean is None else mean_score - baseline_mean
+        delta_ci = _paired_delta_ci(grouped.get(baseline, []), records) if variant_id != baseline else (None, None)
 
         summary = VariantSummary(
             variant_id=variant_id,
@@ -189,6 +190,8 @@ def summarize_runs(
             mean_cost_usd=mean(record.cost_usd for record in records),
             mean_duration_ms=mean(record.duration_ms for record in records),
             delta_vs_baseline=delta,
+            delta_ci_low=delta_ci[0],
+            delta_ci_high=delta_ci[1],
         )
         variant_summaries.append(summary)
 
@@ -331,6 +334,29 @@ def _record_passed(record: RunRecord) -> bool:
 def _mean_run_score(records: list[RunRecord]) -> float | None:
     values = [score.value for record in records for score in record.scores if score.value is not None]
     return mean_or_none(values)
+
+
+def _paired_delta_ci(
+    baseline_records: list[RunRecord],
+    candidate_records: list[RunRecord],
+) -> tuple[float | None, float | None]:
+    from smarteval.core.stats import paired_bootstrap_delta_ci
+
+    baseline_by_case = _per_case_scores(baseline_records)
+    candidate_by_case = _per_case_scores(candidate_records)
+    shared_case_ids = sorted(set(baseline_by_case) & set(candidate_by_case))
+    baseline_values = [baseline_by_case[case_id] for case_id in shared_case_ids]
+    candidate_values = [candidate_by_case[case_id] for case_id in shared_case_ids]
+    return paired_bootstrap_delta_ci(baseline_values, candidate_values)
+
+
+def _per_case_scores(records: list[RunRecord]) -> dict[str, float]:
+    grouped: dict[str, list[float]] = defaultdict(list)
+    for record in records:
+        values = [score.value for score in record.scores if score.value is not None]
+        if values:
+            grouped[record.case_id].append(mean(values))
+    return {case_id: mean(values) for case_id, values in grouped.items()}
 
 
 def _write_run_record(by_case_dir: Path, record: RunRecord) -> None:

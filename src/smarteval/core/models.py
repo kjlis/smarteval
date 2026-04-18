@@ -279,6 +279,8 @@ class VariantSummary(BaseModel):
     mean_cost_usd: float = 0.0
     mean_duration_ms: float = 0.0
     delta_vs_baseline: float | None = None
+    delta_ci_low: float | None = None
+    delta_ci_high: float | None = None
 
 
 class BakeoffSummary(BaseModel):

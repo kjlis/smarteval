@@ -14,6 +14,7 @@ def rescore_bakeoff(
     *,
     run_dir: str | Path,
     rubric_path: str | Path | None = None,
+    persist: bool = True,
 ):
     run_path = Path(run_dir)
     records = list(load_run_records(run_path).values())
@@ -31,7 +32,8 @@ def rescore_bakeoff(
         )
         record.contract = contract
         record.scores = scores
-        _rewrite_record(run_path / "by_case", record)
+        if persist:
+            _rewrite_record(run_path / "by_case", record)
 
     summary = summarize_runs(
         records,
@@ -41,11 +43,12 @@ def rescore_bakeoff(
         evaluator_fingerprint=records[0].evaluator_fingerprint if records else "",
         gates=config.gates,
     )
-    write_summary_json(run_path / "summary.json", summary)
-    if "markdown" in config.reporting.formats:
-        write_summary_markdown(run_path / "summary.md", summary)
-    if config.reporting.ci_summary:
-        write_ci_json(run_path / "ci.json", summary, gates=config.gates)
+    if persist:
+        write_summary_json(run_path / "summary.json", summary)
+        if "markdown" in config.reporting.formats:
+            write_summary_markdown(run_path / "summary.md", summary)
+        if config.reporting.ci_summary:
+            write_ci_json(run_path / "ci.json", summary, gates=config.gates)
     return summary
 
 

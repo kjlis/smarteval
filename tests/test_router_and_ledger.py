@@ -198,10 +198,14 @@ class RouterAndLedgerTests(unittest.TestCase):
             self.assertEqual(doctor_result.exit_code, 0)
             self.assertIn('"config_loadable": true', doctor_result.stdout)
 
+            config = load_config(config_path)
+            run_dir, _ = run_bakeoff(config, output_root=tmp / "runs")
+
             rebaseline_result = runner.invoke(
                 app,
                 [
                     "rebaseline",
+                    str(run_dir),
                     "--path",
                     str(config_path),
                     "--from",

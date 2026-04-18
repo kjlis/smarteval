@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from importlib import import_module
+from importlib import import_module, metadata
 from typing import Any
 
 from smarteval.core.models import BakeoffConfig, PipelineStage, Variant
@@ -36,7 +36,7 @@ def _generator_map() -> dict[str, type[Generator]]:
     from smarteval.plugins.generators.pipeline import PipelineGenerator
     from smarteval.plugins.generators.script import ScriptGenerator
 
-    return {
+    builtins: dict[str, type[Generator]] = {
         "script": ScriptGenerator,
         "pipeline": PipelineGenerator,
         "openai": OpenAIGenerator,
@@ -44,6 +44,7 @@ def _generator_map() -> dict[str, type[Generator]]:
         "anthropic": UnsupportedGenerator,
         "gemini": UnsupportedGenerator,
     }
+    return _merge_entry_points("smarteval.generators", builtins)
 
 
 def _contract_map() -> dict[str, type[ContractValidator]]:
@@ -53,7 +54,7 @@ def _contract_map() -> dict[str, type[ContractValidator]]:
     from smarteval.plugins.contracts.pydantic_model import PydanticModelValidator
     from smarteval.plugins.contracts.regex import RegexValidator
 
-    return {
+    builtins: dict[str, type[ContractValidator]] = {
         "json_schema": JSONSchemaValidator,
         "pydantic_model": PydanticModelValidator,
         "regex": RegexValidator,
@@ -61,6 +62,7 @@ def _contract_map() -> dict[str, type[ContractValidator]]:
         "length_bounds": LengthBoundsValidator,
         "custom_predicate": CustomPredicateValidator,
     }
+    return _merge_entry_points("smarteval.contracts", builtins)
 
 
 def _scorer_map() -> dict[str, type[Scorer]]:
@@ -68,11 +70,25 @@ def _scorer_map() -> dict[str, type[Scorer]]:
     from smarteval.plugins.scorers.llm_rubric import LLMRubricScorer
     from smarteval.plugins.scorers.regex_match import RegexMatchScorer
 
-    return {
+    builtins: dict[str, type[Scorer]] = {
         "exact_match": ExactMatchScorer,
         "regex_match": RegexMatchScorer,
         "llm_rubric": LLMRubricScorer,
     }
+    return _merge_entry_points("smarteval.scorers", builtins)
+
+
+def _merge_entry_points(group: str, builtins: dict[str, type]) -> dict[str, type]:
+    merged = dict(builtins)
+    try:
+        entry_points = metadata.entry_points(group=group)
+    except TypeError:
+        entry_points = metadata.entry_points().select(group=group)
+    for entry_point in entry_points:
+        loaded = entry_point.load()
+        if isinstance(loaded, type):
+            merged[entry_point.name] = loaded
+    return merged
 
 
 def create_generator(
