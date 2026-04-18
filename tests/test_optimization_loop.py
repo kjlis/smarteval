@@ -94,6 +94,16 @@ class OptimizationLoopTests(unittest.TestCase):
             self.assertEqual(trace_payload["rounds_completed"], 2)
             self.assertEqual(trace_payload["final_run_dir"], trace["final_run_dir"])
 
+            summary_payload = json.loads((Path(trace["final_run_dir"]) / "summary.json").read_text(encoding="utf-8"))
+            improvement_traces = {item["variant_id"]: item for item in summary_payload["improvement_traces"]}
+            best_variant_id = trace["rounds"][1]["best_variant_id"]
+            best_trace = improvement_traces[best_variant_id]
+            self.assertEqual(len(best_trace["steps"]), 2)
+            self.assertEqual(best_trace["steps"][0]["rationale"], "fix callable")
+            self.assertEqual(best_trace["steps"][1]["rationale"], "keep winning variant and annotate it")
+            self.assertEqual(best_trace["steps"][0]["changes"][0]["field_path"], "params.callable")
+            self.assertEqual(best_trace["steps"][1]["changes"][0]["field_path"], "description")
+
 
 if __name__ == "__main__":
     unittest.main()

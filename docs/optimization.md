@@ -135,6 +135,16 @@ Key options:
 Each optimization session also writes a machine-readable trace under
 `.smarteval/optimization-runs/`.
 
+The resulting `summary.json` and `summary.md` for each focused bakeoff also include
+`improvement_traces`, which reconstruct the winning path from baseline using ledger ancestry.
+Each step records:
+
+- the proposal rationale or justification
+- the concrete changed fields
+- the observed delta vs the immediate parent
+- the cumulative delta vs baseline
+- the evaluator's overall justification when available from `llm_rubric`
+
 ## Current Limits
 
 - proposal generation itself is still single-call, not agentic

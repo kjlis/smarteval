@@ -36,11 +36,13 @@ This repository is a Python eval framework with a CLI-first workflow. Keep chang
 - `rescore` must reuse stored artifacts and must not rerun generators.
 - Evaluator changes should go through `smarteval rebaseline`, not `try-new-model`.
 - Verdict and proposal history belongs in `ledger/`.
+- Optimization summaries should preserve an explainable lineage from baseline through proposal rationale, changed fields, and observed score deltas.
 
 ## Docs To Keep In Sync
 
 - `README.md` for quick start and common commands
 - `docs/configuration.md` for config schema and defaults
 - `docs/cli.md` for command behavior
+- `docs/scoring-and-gates.md` for summary outputs and evaluator behavior
 - `docs/pipelines-and-asr.md` for manifest-backed pipeline behavior
 - `docs/optimization.md` for proposer and ledger behavior

@@ -53,6 +53,30 @@ def write_summary_markdown(path: str | Path, summary: BakeoffSummary) -> None:
     else:
         lines.append("- None")
 
+    lines.extend(["", "## Best Improvement Path", ""])
+    best_trace = _best_trace(summary)
+    if best_trace is not None:
+        winner = next((item for item in summary.variants if item.variant_id == best_trace.variant_id), None)
+        if winner is not None:
+            lines.append(
+                f"Winner: `{winner.variant_id}` score={_fmt_plain(winner.mean_score)} "
+                f"delta={_fmt(winner.delta_vs_baseline)}"
+            )
+            lines.append("")
+        for index, step in enumerate(best_trace.steps, start=1):
+            lines.append(
+                f"- Step {index}: `{step.parent_variant_id}` -> `{step.variant_id}` "
+                f"(delta vs parent={_fmt(step.delta_vs_parent)}, total delta={_fmt(step.delta_vs_baseline)})"
+            )
+            if step.rationale:
+                lines.append(f"  Justification: {step.rationale}")
+            if step.judge_justification:
+                lines.append(f"  Evaluator note: {step.judge_justification}")
+            if step.changes:
+                lines.append(f"  Changes: {_summarize_changes(step)}")
+    else:
+        lines.append("- None")
+
     lines.extend(["", "## Regressions", ""])
     if summary.regressions:
         lines.extend(f"- {item}" for item in summary.regressions)
@@ -64,3 +88,23 @@ def write_summary_markdown(path: str | Path, summary: BakeoffSummary) -> None:
 
 def _fmt(value: float | None) -> str:
     return "n/a" if value is None else f"{value:+.3f}"
+
+
+def _fmt_plain(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.3f}"
+
+
+def _best_trace(summary: BakeoffSummary):
+    if not summary.improvement_traces:
+        return None
+    return max(
+        summary.improvement_traces,
+        key=lambda item: (item.total_delta_vs_baseline is not None, item.total_delta_vs_baseline or float("-inf"), item.variant_id),
+    )
+
+
+def _summarize_changes(step) -> str:
+    parts = [change.summary for change in step.changes[:4]]
+    if len(step.changes) > 4:
+        parts.append(f"... (+{len(step.changes) - 4} more)")
+    return "; ".join(parts)

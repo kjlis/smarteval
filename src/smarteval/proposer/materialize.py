@@ -20,12 +20,12 @@ def materialize_proposals(
         variant.id = f"{parent.id}-proposal-{timestamp}-{index}"
         if not variant.description:
             variant.description = proposal.rationale
-        _apply_diff(variant, proposal.diff)
+        apply_variant_diff(variant, proposal.diff)
         created.append(variant)
     return created
 
 
-def _apply_diff(variant: Variant, diff: dict) -> None:
+def apply_variant_diff(variant: Variant, diff: dict) -> None:
     for key, value in diff.items():
         if key == "params":
             if not isinstance(value, dict):

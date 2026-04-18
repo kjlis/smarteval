@@ -49,6 +49,9 @@ smarteval rescore --path smarteval.yaml runs/<bakeoff-dir>
 If your pipeline contains `llm_rubric`, the default evaluator backend is the local Codex app-server.
 Override a stage with `backend: openai` only when you explicitly want the OpenAI Responses API.
 
+`rescore` also re-renders `summary.md` and `summary.json`, including any `improvement_traces`
+that can be rebuilt from the current config plus `ledger/variants.jsonl`.
+
 ## `verdict`
 
 Interactive by default. If `status`, `promotion_level`, or `rationale` are omitted, the CLI prompts for them.
@@ -118,6 +121,9 @@ Key options:
 - `--codex-bin`: explicit path to the local Codex binary
 - `--model`: optional proposer model override
 - `--output-root`: run directory root, default `runs`
+
+Each focused run summary includes the normal aggregate metrics plus the best reconstructed
+improvement path from baseline, so you can see which recorded proposal changes produced the lift.
 
 ## `try-new-model`
 

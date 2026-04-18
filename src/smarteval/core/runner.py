@@ -11,6 +11,7 @@ from time import perf_counter
 
 from smarteval.core.fingerprint import compute_evaluator_fingerprint
 from smarteval.core.golden import load_golden_set
+from smarteval.core.improvement_trace import build_improvement_traces
 from smarteval.core.models import (
     Artifact,
     BakeoffConfig,
@@ -135,6 +136,7 @@ def run_bakeoff(
                 if completed_since_summary % summary_interval == 0:
                     partial = summarize_runs(
                         run_records,
+                        config=config,
                         baseline=config.baseline,
                         bakeoff_id=bakeoff_id,
                         golden_hash=golden_hash,
@@ -145,6 +147,7 @@ def run_bakeoff(
 
     summary = summarize_runs(
         run_records,
+        config=config,
         baseline=config.baseline,
         bakeoff_id=bakeoff_id,
         golden_hash=golden_hash,
@@ -175,6 +178,7 @@ def estimate_bakeoff(config: BakeoffConfig) -> dict[str, int]:
 def summarize_runs(
     run_records: list[RunRecord],
     *,
+    config: BakeoffConfig,
     baseline: str,
     bakeoff_id: str,
     golden_hash: str,
@@ -222,6 +226,7 @@ def summarize_runs(
             regressions.append(f"{variant_id} regressed vs baseline by {delta:+.3f}")
 
     variant_summaries.sort(key=lambda item: item.variant_id)
+    improvement_traces = build_improvement_traces(config, variant_summaries, run_records)
     return BakeoffSummary(
         bakeoff_id=bakeoff_id,
         baseline=baseline,
@@ -231,6 +236,7 @@ def summarize_runs(
         variants=variant_summaries,
         per_slice=per_slice,
         specialists=specialists,
+        improvement_traces=improvement_traces,
         regressions=regressions,
         total_cost_usd=sum(record.cost_usd for record in run_records),
         total_duration_ms=sum(record.duration_ms for record in run_records),

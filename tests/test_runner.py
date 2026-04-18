@@ -89,6 +89,16 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(variants["baseline"]["mean_score"], 0.0)
             self.assertEqual(variants["winner"]["mean_score"], 1.0)
             self.assertGreater(variants["winner"]["delta_vs_baseline"], 0.0)
+            traces = {item["variant_id"]: item for item in summary_payload["improvement_traces"]}
+            winner_trace = traces["winner"]
+            self.assertEqual(winner_trace["baseline_variant_id"], "baseline")
+            self.assertEqual(winner_trace["total_delta_vs_baseline"], 1.0)
+            self.assertEqual(len(winner_trace["steps"]), 1)
+            self.assertEqual(winner_trace["steps"][0]["parent_variant_id"], "baseline")
+            self.assertEqual(winner_trace["steps"][0]["changes"][0]["field_path"], "params.callable")
+            summary_markdown = (run_dir / "summary.md").read_text(encoding="utf-8")
+            self.assertIn("## Best Improvement Path", summary_markdown)
+            self.assertIn("params -> callable changed from", summary_markdown)
 
     def test_cli_estimate_and_run(self) -> None:
         runner = CliRunner()

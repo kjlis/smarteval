@@ -12,6 +12,11 @@ This directory is the operator and contributor guide for `smarteval`.
 6. [Optimization](optimization.md)
 7. [Development](development.md)
 
+Summary and lineage details are split across:
+
+- [Scoring And Gates](scoring-and-gates.md) for what each run writes out
+- [Optimization](optimization.md) for how proposal ancestry is recorded and reconstructed
+
 ## Scope
 
 These docs are intentionally shorter than `DESIGN.md`.

@@ -58,6 +58,10 @@ For an ASR pipeline:
 
 `smarteval rescore` reuses the stored primary artifact and the stored manifest references. It does not rerun the pipeline.
 
+When you use optimization on top of a manifest-backed pipeline, the resulting run summaries still
+report a single primary artifact score, but they can now also show an improvement path from the
+baseline variant to the current winner using the recorded proposal lineage.
+
 ## Example
 
 See:

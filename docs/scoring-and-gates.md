@@ -87,4 +87,15 @@ The aggregate summary includes:
 - paired delta confidence intervals
 - per-slice summaries
 - specialist candidates
+- improvement traces for lineage-aware optimization review
 - regression warnings
+
+Improvement traces are built from config variants plus `ledger/variants.jsonl`. When available, each
+step shows:
+
+- the parent variant
+- the recorded proposal rationale
+- the concrete changed fields
+- delta vs the immediate parent
+- cumulative delta vs baseline
+- the evaluator's overall justification from `llm_rubric`, when present

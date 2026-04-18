@@ -46,6 +46,7 @@ def rescore_bakeoff(
 
     summary = summarize_runs(
         records,
+        config=config,
         baseline=config.baseline,
         bakeoff_id=run_path.name.split("__", 1)[0],
         golden_hash=records[0].golden_hash if records else "",

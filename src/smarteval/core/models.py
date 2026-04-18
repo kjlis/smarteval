@@ -287,6 +287,31 @@ class VariantSummary(BaseModel):
     delta_ci_high: float | None = None
 
 
+class VariantChange(BaseModel):
+    field_path: str
+    before: Any | None = None
+    after: Any | None = None
+    summary: str
+
+
+class ImprovementStep(BaseModel):
+    variant_id: str
+    parent_variant_id: str
+    rationale: str | None = None
+    hypothesis: str | None = None
+    judge_justification: str | None = None
+    delta_vs_parent: float | None = None
+    delta_vs_baseline: float | None = None
+    changes: list[VariantChange] = Field(default_factory=list)
+
+
+class ImprovementTrace(BaseModel):
+    variant_id: str
+    baseline_variant_id: str
+    total_delta_vs_baseline: float | None = None
+    steps: list[ImprovementStep] = Field(default_factory=list)
+
+
 class BakeoffSummary(BaseModel):
     bakeoff_id: str
     baseline: str
@@ -296,10 +321,11 @@ class BakeoffSummary(BaseModel):
     variants: list[VariantSummary]
     per_slice: list[SliceSummary] = Field(default_factory=list)
     specialists: list[SpecialistCandidate] = Field(default_factory=list)
+    improvement_traces: list[ImprovementTrace] = Field(default_factory=list)
     regressions: list[str] = Field(default_factory=list)
     total_cost_usd: float = 0.0
     total_duration_ms: int = 0
-    schema_version: int = 1
+    schema_version: int = 2
 
 
 class BakeoffConfig(BaseModel):

@@ -93,6 +93,8 @@ reporting:
 - `summary.md` and `summary.json` are written into the run directory.
 - `ci.json` is written when `ci_summary: true`.
 - Summaries are re-rendered incrementally every `N` completed runs.
+- `summary.json` now includes `improvement_traces` for non-baseline variants when lineage can be reconstructed from the config and ledger.
+- `summary.md` shows the best improvement path, including the recorded rationale, concrete changed fields, and delta vs parent / baseline.
 
 ## Gates
 
