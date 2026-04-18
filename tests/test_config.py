@@ -86,6 +86,7 @@ class ConfigLoadingTests(unittest.TestCase):
             root / "examples" / "asr_manifest" / "smarteval_fast.yaml",
             root / "examples" / "asr_manifest" / "smarteval_balanced.yaml",
             root / "examples" / "asr_manifest" / "smarteval_best.yaml",
+            root / "examples" / "asr_manifest" / "smarteval_golden.yaml",
         ]
 
         loaded_ids: list[str] = []
@@ -107,9 +108,9 @@ class ConfigLoadingTests(unittest.TestCase):
             )
             self.assertEqual(params["primary_output"], "note_txt")
 
-        self.assertEqual(loaded_ids, ["asr-fast", "asr-balanced", "asr-best"])
-        self.assertEqual(prompt_styles, ["brief", "soap", "detailed"])
-        self.assertEqual(asr_models, ["parakeet", "whisper", "whisper"])
+        self.assertEqual(loaded_ids, ["asr-fast", "asr-balanced", "asr-best", "asr-golden"])
+        self.assertEqual(prompt_styles, ["brief", "soap", "detailed", "detailed"])
+        self.assertEqual(asr_models, ["parakeet", "whisper", "whisper", "whisper"])
 
 
 if __name__ == "__main__":

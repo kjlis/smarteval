@@ -1,29 +1,29 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-balanced
+baseline: asr-golden
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
   model: gpt-5-mini
 variants:
-  - id: asr-balanced
-    description: Intermediate deterministic demo with improved structure but lingering grammar and allergy capture issues.
+  - id: asr-golden
+    description: Golden deterministic demo with the cleanest language, strongest structure, and best recommendations.
     generator:
       kind: pipeline
     params:
       callable: deterministic_pipeline.fake_pipeline:run_pipeline
       pipeline_config:
         preprocessing:
-          denoise: aggressive
+          denoise: mild
           voice_enhancement: on
           silence_trimming: conservative
           vad: basic
         asr:
           model: whisper
         note_generation:
-          model: gpt-5-mini
-          prompt_style: soap
+          model: gpt-5
+          prompt_style: detailed
 pipeline:
   - id: exact
     kind: exact_match

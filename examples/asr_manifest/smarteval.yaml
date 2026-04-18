@@ -1,14 +1,48 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-note
+baseline: asr-fast
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
   model: gpt-5-mini
 variants:
-  - id: asr-note
-    description: Deterministic ASR-note demo pipeline variant.
+  - id: asr-fast
+    description: Weak baseline deterministic demo with rough language and vague planning.
+    generator:
+      kind: pipeline
+    params:
+      callable: deterministic_pipeline.fake_pipeline:run_pipeline
+      pipeline_config:
+        preprocessing:
+          denoise: off
+          voice_enhancement: off
+          silence_trimming: aggressive
+          vad: strict
+        asr:
+          model: parakeet
+        note_generation:
+          model: gpt-5-mini
+          prompt_style: brief
+  - id: asr-balanced
+    description: Intermediate deterministic demo with better structure but still uneven language.
+    generator:
+      kind: pipeline
+    params:
+      callable: deterministic_pipeline.fake_pipeline:run_pipeline
+      pipeline_config:
+        preprocessing:
+          denoise: aggressive
+          voice_enhancement: on
+          silence_trimming: conservative
+          vad: basic
+        asr:
+          model: whisper
+        note_generation:
+          model: gpt-5-mini
+          prompt_style: soap
+  - id: asr-best
+    description: Near-best deterministic demo with detailed note formatting but minor leakage.
     generator:
       kind: pipeline
     params:
@@ -23,7 +57,24 @@ variants:
           model: whisper
         note_generation:
           model: gpt-5-mini
-          prompt_style: soap
+          prompt_style: detailed
+  - id: asr-golden
+    description: Golden deterministic demo with the cleanest and most actionable note.
+    generator:
+      kind: pipeline
+    params:
+      callable: deterministic_pipeline.fake_pipeline:run_pipeline
+      pipeline_config:
+        preprocessing:
+          denoise: mild
+          voice_enhancement: on
+          silence_trimming: conservative
+          vad: basic
+        asr:
+          model: whisper
+        note_generation:
+          model: gpt-5
+          prompt_style: detailed
 pipeline:
   - id: exact
     kind: exact_match

@@ -8,7 +8,7 @@ evaluator:
   model: gpt-5-mini
 variants:
   - id: asr-best
-    description: Best-quality deterministic demo with stronger ASR and detailed note formatting.
+    description: Near-best deterministic demo with strong structure but minor language leakage and softer recommendations.
     generator:
       kind: pipeline
     params:
@@ -22,7 +22,7 @@ variants:
         asr:
           model: whisper
         note_generation:
-          model: gpt-5
+          model: gpt-5-mini
           prompt_style: detailed
 pipeline:
   - id: exact

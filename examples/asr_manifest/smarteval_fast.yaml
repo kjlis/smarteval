@@ -8,7 +8,7 @@ evaluator:
   model: gpt-5-mini
 variants:
   - id: asr-fast
-    description: Fast deterministic demo with more loss from preprocessing and brief note formatting.
+    description: Weak baseline deterministic demo with rough language, missing details, and vague recommendations.
     generator:
       kind: pipeline
     params:

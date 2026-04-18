@@ -1,14 +1,42 @@
 patient_name: Jordan Lee
+age: 34
 speaker_roles:
   - clinician
   - patient
-complaint: cough and fever
+complaint: persistent cough, fever, and fatigue
 duration_days: 3
+history: Symptoms began after a sick contact at home and have been worse at night.
+associated_symptoms:
+  - sore throat
+  - nasal congestion
+  - intermittent chills
+  - decreased appetite
+negative_symptoms:
+  - no chest pain
+  - no hemoptysis
+  - no shortness of breath at rest
 medications:
-  - ibuprofen
+  - ibuprofen 400 mg as needed
+  - dextromethorphan syrup at bedtime
 allergies:
   - penicillin
+vitals:
+  temperature: 38.1 C
+  heart_rate: 98 bpm
+  blood_pressure: 118/74
+  oxygen_saturation: 98% on room air
+exam:
+  - mild pharyngeal erythema
+  - dry cough during interview
+  - lungs clear to auscultation
+  - no respiratory distress
+assessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia.
 plan:
-  - hydration
-  - rest
-  - return if symptoms worsen
+  - supportive care with hydration and rest
+  - continue ibuprofen for fever and pain
+  - consider honey or throat lozenges for cough relief
+  - follow up if symptoms persist beyond 5 to 7 days
+return_precautions:
+  - seek urgent care for worsening shortness of breath
+  - return for persistent fever above 39 C
+  - re-evaluate if cough becomes productive with chest pain

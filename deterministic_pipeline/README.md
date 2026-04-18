@@ -37,6 +37,10 @@ Runnable eval configs for `smarteval` live in `examples/asr_manifest/`:
 - `smarteval_fast.yaml`
 - `smarteval_balanced.yaml`
 - `smarteval_best.yaml`
+- `smarteval_golden.yaml`
+
+The default `examples/asr_manifest/smarteval.yaml` compares the whole progression from weak baseline
+to golden variant in one run.
 
 Run them with:
 
@@ -44,6 +48,8 @@ Run them with:
 .venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_fast.yaml
 .venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_balanced.yaml
 .venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_best.yaml
+.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_golden.yaml
+.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval.yaml
 ```
 
 Pipeline-only configs for direct manual runs live in `deterministic_pipeline/configs/`:
@@ -51,6 +57,7 @@ Pipeline-only configs for direct manual runs live in `deterministic_pipeline/con
 - `fast.yaml`
 - `balanced.yaml`
 - `best.yaml`
+- `golden.yaml`
 
 Run the pipeline directly with:
 
@@ -58,6 +65,7 @@ Run the pipeline directly with:
 .venv/bin/python -m deterministic_pipeline.run_demo --config deterministic_pipeline/configs/fast.yaml
 .venv/bin/python -m deterministic_pipeline.run_demo --config deterministic_pipeline/configs/balanced.yaml
 .venv/bin/python -m deterministic_pipeline.run_demo --config deterministic_pipeline/configs/best.yaml
+.venv/bin/python -m deterministic_pipeline.run_demo --config deterministic_pipeline/configs/golden.yaml
 ```
 
 Override the sample encounter with:

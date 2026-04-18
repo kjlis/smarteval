@@ -6,3 +6,8 @@ build/
 dist/
 *.egg-info/
 runs/
+example_runs/
+manual_pipeline_runs/
+manual_pipeline_runs_realistic/
+runs_realistic/
+examples/asr_manifest/ledger/
