@@ -12,10 +12,11 @@ smarteval rescore --path smarteval.yaml <run_dir>
 smarteval diff <run_dir_a> <run_dir_b>
 smarteval log --path smarteval.yaml
 smarteval verdict --path smarteval.yaml <run_id>
-smarteval propose --path smarteval.yaml <run_dir>
+smarteval propose --path smarteval.yaml <run_dir> [--backend codex_local|openai] [--codex-bin /path/to/codex]
 smarteval try-new-model <model_id> --path smarteval.yaml
 smarteval rebaseline --path smarteval.yaml <run_dir> --from OLD --to NEW
 smarteval doctor --path smarteval.yaml
+python scripts/optimize_loop.py --path smarteval.yaml [--rounds 5] [--proposals-per-round 3]
 ```
 
 ## `run`
@@ -66,7 +67,57 @@ Builds a proposer context from:
 - recent rejected variants
 - current framework constraints
 
+The proposer backend now defaults to local Codex. Use `--backend openai` only when you explicitly
+want the previous OpenAI Responses-based proposer.
+
+Typical usage:
+
+```bash
+smarteval propose --path smarteval.yaml runs/<bakeoff-dir>
+smarteval propose --path smarteval.yaml runs/<bakeoff-dir> --backend openai
+smarteval propose --path smarteval.yaml runs/<bakeoff-dir> --codex-bin /opt/homebrew/bin/codex
+```
+
+Behavior:
+
+- `--backend` defaults to `codex_local`
+- `--codex-bin` lets you point at a specific local Codex binary when it is not on `PATH`
+- `--write` persists proposals even when `autonomy.propose` is `suggest_only`
+- `--run-now` queues a focused bakeoff with baseline plus the newly materialized proposals
+
 If autonomy is set to auto-queue, proposals are materialized into child variants and may immediately run as a focused bakeoff.
+
+## `scripts/optimize_loop.py`
+
+This wrapper runs the multi-round optimizer implemented in `src/smarteval/optimization/loop.py`.
+It starts from a config, runs the initial bakeoff, proposes improvements, persists the materialized
+variants into `ledger/variants.jsonl`, runs the next focused bakeoff, and repeats for `N` rounds.
+
+Typical usage from the repo root:
+
+```bash
+python scripts/optimize_loop.py \
+  --path /path/to/smarteval.yaml \
+  --rounds 5 \
+  --proposals-per-round 3 \
+  --codex-bin /opt/homebrew/bin/codex
+```
+
+To force the previous proposer backend:
+
+```bash
+python scripts/optimize_loop.py --path /path/to/smarteval.yaml --backend openai
+```
+
+Key options:
+
+- `--path`: required config path
+- `--rounds`: number of propose-and-rerun rounds, default `5`
+- `--proposals-per-round`: maximum proposals requested each round, default `3`
+- `--backend`: proposer backend, default `codex_local`
+- `--codex-bin`: explicit path to the local Codex binary
+- `--model`: optional proposer model override
+- `--output-root`: run directory root, default `runs`
 
 ## `try-new-model`
 

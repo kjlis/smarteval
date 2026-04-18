@@ -9,6 +9,7 @@
 - Scores one primary artifact per run while retaining sibling outputs as attachments/context
 - Persists variant and verdict history in `ledger/`
 - Supports `resume`, `rescore`, `propose`, `rebaseline`, and `try-new-model`
+- Defaults proposer calls to local Codex, with explicit OpenAI fallback support
 
 ## Quick Start
 
@@ -91,15 +92,18 @@ smarteval run --path smarteval.yaml [--variant ID] [--tag TAG] [--case-pattern G
 smarteval resume --path smarteval.yaml <run_dir>
 smarteval rescore --path smarteval.yaml <run_dir>
 smarteval diff <run_dir_a> <run_dir_b>
-smarteval propose --path smarteval.yaml <run_dir>
+smarteval propose --path smarteval.yaml <run_dir> [--backend codex_local|openai] [--codex-bin /path/to/codex]
 smarteval verdict --path smarteval.yaml <run_id>
 smarteval try-new-model <model_id> --path smarteval.yaml
 smarteval rebaseline --path smarteval.yaml <run_dir> --from OLD --to NEW
 smarteval doctor --path smarteval.yaml
+python scripts/optimize_loop.py --path smarteval.yaml [--rounds 5] [--proposals-per-round 3]
 ```
 
 ## Notes
 
+- `smarteval propose` now uses the local Codex proposer backend by default. Pass `--backend openai` to force the previous OpenAI Responses path.
+- `python scripts/optimize_loop.py` runs an initial bakeoff, proposes improvements, persists materialized variants into `ledger/variants.jsonl`, and reruns focused bakeoffs for multiple rounds.
 - `try-new-model` is for generator swaps only. Evaluator changes must go through `rebaseline`.
 - `rescore` reuses stored artifacts instead of rerunning generators.
 - Project-level evaluator locks live under `.smarteval/lock.json`.
