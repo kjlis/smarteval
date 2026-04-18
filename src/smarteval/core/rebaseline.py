@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from datetime import datetime, timezone
 from pathlib import Path
 
 from smarteval.core.config import load_config
@@ -49,6 +50,12 @@ def rebaseline_evaluator(
         "comparison": comparison,
         "approved": approve,
     }
+
+    report_dir = (config.project_root or Path.cwd()) / ".smarteval" / "rebaseline-reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')}.json"
+    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    payload["report_path"] = str(report_path)
 
     if approve:
         lock_path = (config.project_root or Path.cwd()) / ".smarteval" / "lock.json"

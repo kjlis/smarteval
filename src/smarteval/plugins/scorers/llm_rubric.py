@@ -6,6 +6,7 @@ from typing import Any
 
 from smarteval.core.models import Artifact, Case, ContractResult, Rubric, Score
 from smarteval.core.openai_client import build_openai_client
+from smarteval.core.rate_limit import get_bucket
 from smarteval.core.render import render_template
 from smarteval.core.rubric import load_rubric
 from smarteval.plugins.base import Scorer
@@ -46,6 +47,10 @@ class LLMRubricScorer(Scorer):
         reasoning_effort = self.settings.get("reasoning_effort")
         if reasoning_effort:
             response_kwargs["reasoning"] = {"effort": reasoning_effort}
+
+        rpm = self.settings.get("rpm")
+        if isinstance(rpm, int) and rpm > 0:
+            get_bucket(f"evaluator:{response_kwargs['model']}", rpm).acquire()
 
         response = self._client.responses.create(**response_kwargs)
         payload = json.loads(response.output_text)

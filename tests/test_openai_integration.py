@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from smarteval.core.models import Artifact, Case, ContractResult, Rubric, RubricDimension
+from smarteval.core.rate_limit import clear_buckets
 from smarteval.plugins.generators.openai import CodexGenerator, OpenAIGenerator
 from smarteval.plugins.scorers.llm_rubric import LLMRubricScorer
 
@@ -37,6 +38,9 @@ class FakeClient:
 
 
 class OpenAIIntegrationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        clear_buckets()
+
     def test_openai_generator_renders_prompt_and_returns_text_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             prompt_path = Path(tmp_dir) / "prompt.txt"
@@ -85,6 +89,31 @@ class OpenAIIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(score.value or 0.0, 0.8)
         self.assertTrue(score.passed)
         self.assertEqual(score.raw["usage"]["input_tokens"], 10)
+
+    def test_openai_generator_honors_rate_limit_bucket(self) -> None:
+        import smarteval.plugins.generators.openai as openai_mod
+
+        class StubBucket:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def acquire(self) -> None:
+                self.calls += 1
+
+        bucket = StubBucket()
+        original = openai_mod.get_bucket
+        openai_mod.get_bucket = lambda name, rpm: bucket
+        try:
+            client = FakeClient("final answer")
+            generator = OpenAIGenerator(model="gpt-4.1", _client=client)
+            case = Case(id="q4", input={"question": "What is 2+2?"}, added_at="2026-04-17")
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                prompt_path = Path(tmp_dir) / "prompt.txt"
+                prompt_path.write_text("Q: {input_json}", encoding="utf-8")
+                generator.generate(case, {"prompt": str(prompt_path), "rpm": 30})
+            self.assertEqual(bucket.calls, 1)
+        finally:
+            openai_mod.get_bucket = original
 
 
 if __name__ == "__main__":

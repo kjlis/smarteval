@@ -5,6 +5,7 @@ from typing import Any
 
 from smarteval.core.models import Artifact, Case
 from smarteval.core.openai_client import build_openai_client
+from smarteval.core.rate_limit import get_bucket
 from smarteval.core.render import render_template
 from smarteval.plugins.base import Generator
 
@@ -53,6 +54,11 @@ class OpenAIGenerator(Generator):
         response_format = params.get("response_format")
         if response_format == "json_object":
             response_kwargs["text"] = {"format": {"type": "json_object"}}
+
+        rpm = params.get("rpm", self.settings.get("rpm"))
+        if isinstance(rpm, int) and rpm > 0:
+            bucket_name = f"generator:{self.name}:{response_kwargs['model']}"
+            get_bucket(bucket_name, rpm).acquire()
 
         response = self._client.responses.create(**response_kwargs)
         output_text = getattr(response, "output_text", "")

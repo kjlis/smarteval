@@ -217,6 +217,7 @@ class RouterAndLedgerTests(unittest.TestCase):
             )
             self.assertEqual(rebaseline_result.exit_code, 0)
             self.assertTrue((tmp / ".smarteval" / "lock.json").exists())
+            self.assertTrue((tmp / ".smarteval" / "rebaseline-reports").exists())
 
 
 if __name__ == "__main__":

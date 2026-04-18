@@ -135,6 +135,7 @@ def create_scorer(stage: PipelineStage, *, evaluator: Any | None = None) -> Scor
         stage_settings.setdefault("reasoning_effort", evaluator.reasoning_effort)
         stage_settings.setdefault("temperature", evaluator.temperature)
         stage_settings.setdefault("top_p", evaluator.top_p)
+        stage_settings.setdefault("rpm", evaluator.rpm)
     scorer_cls = _scorer_map().get(kind)
     if scorer_cls is None:
         raise KeyError(f"unknown scorer kind {kind!r}")
