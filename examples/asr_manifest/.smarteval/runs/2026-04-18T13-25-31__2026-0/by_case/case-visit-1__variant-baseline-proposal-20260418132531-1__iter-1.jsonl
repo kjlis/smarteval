@@ -1,0 +1,178 @@
+{
+  "run_id": "2026-04-18T13-25-31/visit-1/baseline-proposal-20260418132531-1/1",
+  "case_id": "visit-1",
+  "case_input": {
+    "output_root": "example_runs",
+    "encounter": {
+      "patient_name": "Jordan Lee",
+      "age": 34,
+      "speaker_roles": [
+        "clinician",
+        "patient"
+      ],
+      "complaint": "persistent cough, fever, and fatigue",
+      "duration_days": 3,
+      "history": "Symptoms began after a sick contact at home and have been worse at night.",
+      "associated_symptoms": [
+        "sore throat",
+        "nasal congestion",
+        "intermittent chills",
+        "decreased appetite"
+      ],
+      "negative_symptoms": [
+        "no chest pain",
+        "no hemoptysis",
+        "no shortness of breath at rest"
+      ],
+      "medications": [
+        "ibuprofen 400 mg as needed",
+        "dextromethorphan syrup at bedtime"
+      ],
+      "allergies": [
+        "penicillin"
+      ],
+      "vitals": {
+        "temperature": "38.1 C",
+        "heart_rate": "98 bpm",
+        "blood_pressure": "118/74",
+        "oxygen_saturation": "98% on room air"
+      },
+      "exam": [
+        "mild pharyngeal erythema",
+        "dry cough during interview",
+        "lungs clear to auscultation",
+        "no respiratory distress"
+      ],
+      "assessment": "Most consistent with a viral upper respiratory infection without current evidence of pneumonia.",
+      "plan": [
+        "supportive care with hydration and rest",
+        "continue ibuprofen for fever and pain",
+        "consider honey or throat lozenges for cough relief",
+        "follow up if symptoms persist beyond 5 to 7 days"
+      ],
+      "return_precautions": [
+        "seek urgent care for worsening shortness of breath",
+        "return for persistent fever above 39 C",
+        "re-evaluate if cough becomes productive with chest pain"
+      ]
+    }
+  },
+  "case_expected": {
+    "answer": "Clinical Follow-Up Note\nJordan Lee is a 34-year-old adult evaluated for persistent cough, fever, and fatigue for 3 days after a household sick contact. The patient reports that symptoms have been worse at night and are accompanied by sore throat, nasal congestion, intermittent chills, decreased appetite. Appetite is reduced, but oral intake and hydration are still adequate. The patient has been using ibuprofen 400 mg as needed; dextromethorphan syrup at bedtime with partial relief. Allergy history is notable for penicillin.\n\nReview of symptoms is otherwise reassuring for no chest pain, no hemoptysis, no shortness of breath at rest. Observed or reported vitals include temperature 38.1 C, heart rate 98 bpm, blood pressure 118/74, and oxygen saturation 98% on room air. Exam findings documented in the encounter included mild pharyngeal erythema, dry cough during interview, lungs clear to auscultation, no respiratory distress.\n\nAssessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia. The current presentation favors supportive outpatient management because there is no evidence in the transcript of focal chest findings, resting dyspnea, or hemodynamic instability.\n\nPlan: Supportive care with hydration and rest, continue ibuprofen for fever and pain, and consider honey or throat lozenges for cough relief. Also follow up if symptoms persist beyond 5 to 7 days. Reinforced medication safety, hydration goals, and cough comfort measures. Return precautions were reviewed explicitly: return precautions include seek urgent care for worsening shortness of breath; return for persistent fever above 39 C; re-evaluate if cough becomes productive with chest pain. If the fever pattern worsens, respiratory symptoms escalate, or oral intake declines further, the patient should be re-evaluated sooner rather than waiting for routine follow-up."
+  },
+  "variant_id": "baseline-proposal-20260418132531-1",
+  "generator": "pipeline",
+  "iteration": 1,
+  "artifact": {
+    "kind": "text",
+    "payload": "Clinical Follow-Up Note\nJordan Lee is a 34-year-old adult seen for persistent cough, fever, and fatigue lasting 3 days. Symptoms began after a household sick contact and are worse at night. The patient also described sore throat, nasal congestion, intermittent chills, decreased appetite. Current self-care includes ibuprofen 400 mg as needed; dextromethorphan syrup at bedtime. Overall intake is reduced but oral hydration is still possible. A small language drift appeared in the transcript as merci, and another isolated term, fatigue, but the rest of the documentation remained understandable.\n\nOn review of the recorded encounter, the patient denied no chest pain, no hemoptysis, no shortness of breath at rest. Reported vitals and observed status were reassuring, including oxygen saturation 98% on room air. Exam descriptors included mild pharyngeal erythema, dry cough during interview, lungs clear to auscultation, no respiratory distress.\n\nAssessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia.\n\nPlan: Continue supportive care with hydration, rest, antipyretic use, and symptomatic cough treatment. Recommend reassessment if symptoms fail to improve over the next several days. The recommendation set is better organized than the weaker variants, but it still does not spell out full return precautions with the same clarity as the golden note.",
+    "attachments": {
+      "transcript_txt": {
+        "kind": "text",
+        "uri": "transcript.txt",
+        "metadata": {}
+      },
+      "debug_json": {
+        "kind": "json",
+        "uri": "debug.json",
+        "metadata": {}
+      }
+    },
+    "source_manifest": "/Users/merowing/work/personal/smarteval/example_runs/visit-1/ed02f7e848/manifest.json",
+    "source_run_dir": "/Users/merowing/work/personal/smarteval/example_runs/visit-1/ed02f7e848",
+    "metadata": {
+      "pipeline_name": "deterministic-asr-demo",
+      "config_hash": "ed02f7e848",
+      "quality_score": 0.791,
+      "quality_band": "high",
+      "profile": "best",
+      "matched_profile": "custom"
+    }
+  },
+  "contract": {
+    "passed": true,
+    "violations": [],
+    "warnings": []
+  },
+  "scores": [
+    {
+      "name": "note_quality",
+      "value": 0.52,
+      "raw": {
+        "rubric": {
+          "dimensions": [
+            {
+              "id": "factual_capture",
+              "score": 3,
+              "justification": "The note captures the main complaint, duration, sick contact, nighttime worsening, associated symptoms, medications, several negative symptoms, oxygen saturation, key exam findings, and the viral URI assessment. It omits clinically important details including the penicillin allergy and most of the recorded vitals (temperature, heart rate, blood pressure), and it introduces unsupported transcript commentary about language drift.",
+              "failure_mode": "hallucination"
+            },
+            {
+              "id": "structure_and_completeness",
+              "score": 3,
+              "justification": "The note has a recognizable follow-up structure with history, review/exam content, assessment, and plan. However, it is incomplete for a chart-ready follow-up note because allergy information, full vitals, and a sufficiently detailed plan/precautions section are missing or underdeveloped.",
+              "failure_mode": "incomplete"
+            },
+            {
+              "id": "plan_and_precautions",
+              "score": 2,
+              "justification": "The plan is materially weaker than expected. It keeps the broad idea of supportive care but replaces specific guidance with generic wording, omits the explicit return precautions, and softens the follow-up window from the expected 5 to 7 days to a vague reassessment over the next several days.",
+              "failure_mode": "missing_precautions"
+            },
+            {
+              "id": "clinical_style",
+              "score": 2,
+              "justification": "Much of the language is clinically acceptable, but the note contains clear evaluation leakage and non-clinical commentary such as references to language drift, weaker variants, and a golden note. That tone does not match a professional clinical document.",
+              "failure_mode": "tone_mismatch"
+            },
+            {
+              "id": "readability_and_flow",
+              "score": 3,
+              "justification": "The note is generally readable and follows a sensible top-to-bottom order. Flow is hurt by awkward phrasing such as 'denied no chest pain' and by the inserted meta commentary, which interrupts the clinical narrative.",
+              "failure_mode": "choppy_flow"
+            },
+            {
+              "id": "presentation_taste",
+              "score": 2,
+              "justification": "Basic headings are present, but the overall presentation is not chart-ready because of the embedded evaluative/meta statements and the under-specified plan section. It feels less polished than the expected note despite containing some correct facts.",
+              "failure_mode": "unpolished"
+            }
+          ],
+          "overall_justification": "The artifact preserves many core history and exam facts and maintains a basic clinical-note structure, but it falls short of the expected standard. Its main problems are missing key clinical details such as allergy and full vitals, a generic and incomplete plan without explicit return precautions, and obvious meta/evaluation leakage that makes the note feel less professional and less chart-ready."
+        },
+        "usage": {
+          "last": {
+            "cached_input_tokens": 25472,
+            "input_tokens": 25854,
+            "output_tokens": 1046,
+            "reasoning_output_tokens": 516,
+            "total_tokens": 26900
+          },
+          "model_context_window": 258400,
+          "total": {
+            "cached_input_tokens": 25472,
+            "input_tokens": 25854,
+            "output_tokens": 1046,
+            "reasoning_output_tokens": 516,
+            "total_tokens": 26900
+          }
+        }
+      },
+      "confidence": null,
+      "passed": false
+    }
+  ],
+  "cost_usd": 0.0,
+  "duration_ms": 22967,
+  "timestamp": "2026-04-18T13:25:55.783238Z",
+  "evaluator_fingerprint": "68a006d5a756",
+  "golden_hash": "29006320a251",
+  "status": "success",
+  "error": null,
+  "tags": [
+    "note",
+    "asr-demo",
+    "optimization-path"
+  ],
+  "difficulty": null
+}

@@ -28,6 +28,13 @@ class ConfigLoadingTests(unittest.TestCase):
                     artifact_selection:
                       primary_output: note_txt
                       copy_attachments: false
+                    optimization:
+                      search_space:
+                        allowed_values:
+                          params.pipeline_config.asr.model: [parakeet, whisper]
+                      diversity:
+                        require_one_of:
+                          - params.pipeline_config.asr.model
                     evaluator:
                       model: gpt-4o-mini
                     variants:
@@ -45,6 +52,14 @@ class ConfigLoadingTests(unittest.TestCase):
             config = load_config(config_path)
             self.assertEqual(config.artifact_selection.primary_output, "note_txt")
             self.assertEqual(config.golden_set, golden_path.resolve())
+            self.assertEqual(
+                config.optimization.search_space.allowed_values["params.pipeline_config.asr.model"],
+                ["parakeet", "whisper"],
+            )
+            self.assertEqual(
+                config.optimization.diversity.require_one_of,
+                ["params.pipeline_config.asr.model"],
+            )
 
             generator, params = create_generator(config.get_variant("note-baseline"), config=config)
             self.assertEqual(generator.name, "pipeline")
@@ -104,6 +119,11 @@ class ConfigLoadingTests(unittest.TestCase):
                 params["callable"], "deterministic_pipeline.fake_pipeline:run_pipeline"
             )
             self.assertEqual(params["primary_output"], "note_txt")
+            self.assertIn("params.pipeline_config.asr.model", config.optimization.search_space.allowed_values)
+            self.assertEqual(
+                config.optimization.diversity.require_one_of,
+                ["params.pipeline_config.asr.model"],
+            )
 
         self.assertEqual(loaded_ids, ["baseline"])
         self.assertEqual(prompt_styles, ["brief"])

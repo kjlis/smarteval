@@ -32,6 +32,7 @@ pipeline:
 - `pipeline`: ordered contract/scoring stages
 - `execution`: run count, concurrency, and budget settings
 - `reporting`: summary output policy
+- `optimization`: proposer search-space and diversity guidance for optimization loops
 - `gates`: post-run gate behavior
 - `router`: optional router spec for specialist dispatch
 - `autonomy`: proposer and queued-run behavior
@@ -96,6 +97,24 @@ reporting:
 - `summary.json` now includes `improvement_traces` for non-baseline variants when lineage can be reconstructed from the config and ledger.
 - `summary.md` shows the best improvement path, including the recorded rationale, concrete changed fields, and delta vs parent / baseline.
 - When you use the default output root, runs are written under `.smarteval/runs/` next to the config so each eval config keeps its own history root.
+
+## Optimization
+
+```yaml
+optimization:
+  search_space:
+    allowed_values:
+      params.pipeline_config.asr.model: [parakeet, whisper]
+      params.pipeline_config.note_generation.prompt_style: [brief, soap, detailed]
+  diversity:
+    require_one_of:
+      - params.pipeline_config.asr.model
+```
+
+- `search_space.allowed_values` constrains proposer edits for specific field paths.
+- Field paths can use deep dotted keys such as `params.pipeline_config.asr.model`.
+- `diversity.require_one_of` requires at least one proposal in each optimization round to touch one of those field paths.
+- If the proposer misses a required diversity field and `allowed_values` provides alternatives, the framework synthesizes one exploration proposal automatically.
 
 ## Gates
 

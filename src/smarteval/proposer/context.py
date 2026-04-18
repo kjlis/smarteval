@@ -42,6 +42,7 @@ def build_proposer_context(
             "primary_output": config.artifact_selection.primary_output,
             "baseline": config.baseline,
         },
+        "optimization": config.optimization.model_dump(),
     }
 
 

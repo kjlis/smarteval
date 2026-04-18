@@ -1,0 +1,47 @@
+{
+  "dimensions": {
+    "factual_capture": 0.79,
+    "grammar": 0.79,
+    "recommendation_quality": 0.77,
+    "structure": 0.64
+  },
+  "effects": [
+    "profile=best",
+    "matched_profile=custom",
+    "factual_capture=0.79",
+    "grammar=0.79",
+    "structure=0.64",
+    "recommendation_quality=0.77",
+    "asr_model=whisper",
+    "prompt_style=soap",
+    "language_leakage=French"
+  ],
+  "language_leakage": {
+    "language": "French",
+    "tokens": [
+      "merci",
+      "fatigue"
+    ]
+  },
+  "matched_profile": "custom",
+  "note": "Clinical Follow-Up Note\nJordan Lee is a 34-year-old adult seen for persistent cough, fever, and fatigue lasting 3 days. Symptoms began after a household sick contact and are worse at night. The patient also described sore throat, nasal congestion, intermittent chills, decreased appetite. Current self-care includes ibuprofen 400 mg as needed; dextromethorphan syrup at bedtime. Overall intake is reduced but oral hydration is still possible. A small language drift appeared in the transcript as merci, and another isolated term, fatigue, but the rest of the documentation remained understandable.\n\nOn review of the recorded encounter, the patient denied no chest pain, no hemoptysis, no shortness of breath at rest. Reported vitals and observed status were reassuring, including oxygen saturation 98% on room air. Exam descriptors included mild pharyngeal erythema, dry cough during interview, lungs clear to auscultation, no respiratory distress.\n\nAssessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia.\n\nPlan: Continue supportive care with hydration, rest, antipyretic use, and symptomatic cough treatment. Recommend reassessment if symptoms fail to improve over the next several days. The recommendation set is better organized than the weaker variants, but it still does not spell out full return precautions with the same clarity as the golden note.",
+  "pipeline_config": {
+    "asr": {
+      "model": "whisper"
+    },
+    "note_generation": {
+      "model": "gpt-5",
+      "prompt_style": "soap"
+    },
+    "preprocessing": {
+      "denoise": "aggressive",
+      "silence_trimming": "moderate",
+      "vad": "balanced",
+      "voice_enhancement": "on"
+    }
+  },
+  "profile": "best",
+  "quality_band": "high",
+  "quality_score": 0.756,
+  "transcript": "Clinician/Patient transcript\nPatient Jordan Lee reports persistent cough, fever, and fatigue for 3 days after household exposure. Also notes sore throat, nasal congestion, intermittent chills, decreased appetite. merci.\nMedication and return guidance were captured, though one phrase drifted in from another language: fatigue."
+}

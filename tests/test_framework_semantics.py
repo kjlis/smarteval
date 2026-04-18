@@ -7,7 +7,7 @@ from pathlib import Path
 
 from smarteval.core.config import load_config
 from smarteval.core.model_swap import select_variants_for_model_try
-from smarteval.core.models import Artifact, Case
+from smarteval.core.models import Artifact, Case, VariantProposal
 from smarteval.core.pipeline import execute_scoring_pipeline
 from smarteval.core.runner import run_bakeoff
 from smarteval.proposer.dedup import filter_duplicate_proposals
@@ -229,6 +229,61 @@ class FrameworkSemanticsTests(unittest.TestCase):
             materialized = materialize_proposals(config.variants, proposals)
 
             self.assertEqual(materialized[0].params["prompt_text"], "answer carefully")
+
+    def test_materialize_proposals_deep_merges_nested_param_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp = Path(tmp_dir)
+            golden = tmp / "golden.jsonl"
+            golden.write_text(
+                '{"id":"q1","input":{"question":"x"},"expected":{"answer":"ok"},"added_at":"2026-04-17"}\n',
+                encoding="utf-8",
+            )
+            config_path = tmp / "smarteval.yaml"
+            config_path.write_text(
+                textwrap.dedent(
+                    f"""
+                    version: 1
+                    golden_set: {golden}
+                    baseline: baseline
+                    evaluator:
+                      model: gpt-4.1
+                    variants:
+                      - id: baseline
+                        generator:
+                          kind: script
+                        params:
+                          callable: tests.helpers:always_wrong
+                          pipeline_config:
+                            asr:
+                              model: parakeet
+                            note_generation:
+                              model: gpt-5-mini
+                              prompt_style: brief
+                    pipeline:
+                      - id: exact
+                        kind: exact_match
+                    """
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+
+            materialized = materialize_proposals(
+                config.variants,
+                [
+                    VariantProposal(
+                        parent_variant_id="baseline",
+                        rationale="change only the ASR model",
+                        diff={"params.pipeline_config.asr.model": "whisper"},
+                        expected_slice="math",
+                    )
+                ],
+            )
+
+            pipeline_config = materialized[0].params["pipeline_config"]
+            self.assertEqual(pipeline_config["asr"]["model"], "whisper")
+            self.assertEqual(pipeline_config["note_generation"]["model"], "gpt-5-mini")
+            self.assertEqual(pipeline_config["note_generation"]["prompt_style"], "brief")
 
     def test_embedding_similarity_scorer_returns_normalized_score(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -1,0 +1,47 @@
+{
+  "dimensions": {
+    "factual_capture": 0.72,
+    "grammar": 0.73,
+    "recommendation_quality": 0.81,
+    "structure": 0.71
+  },
+  "effects": [
+    "profile=intermediate",
+    "matched_profile=custom",
+    "factual_capture=0.72",
+    "grammar=0.73",
+    "structure=0.71",
+    "recommendation_quality=0.81",
+    "asr_model=parakeet",
+    "prompt_style=detailed",
+    "language_leakage=Polish"
+  ],
+  "language_leakage": {
+    "language": "Polish",
+    "tokens": [
+      "dziekuje",
+      "kaszel"
+    ]
+  },
+  "matched_profile": "custom",
+  "note": "SOAP Note\nSubjective: Patient reports persistent cough, fever, and fatigue for several days after sick exposure at home. Associated symptoms include sore throat, nasal congestion, intermittent chills. She has been using ibuprofen 400 mg as needed and says appetite is down. One stray language fragment appeared in the transcript, dziekuje, but the rest was understandable.\n\nObjective: Conversation suggests temperature near 38.1 C and no respiratory distress. Dry cough was heard during the interview. Some exam details remained incomplete and the allergy history was summarized only loosely. kaszel.\n\nAssessment: Viral upper respiratory infection is most likely. Pneumonia seems less likely because the patient denied chest pain and shortness of breath at rest, but the note still lacks a crisp summary of all negatives.\n\nPlan: Continue hydration, rest, and ibuprofen as needed for fever or throat discomfort. Encourage cough supportive care and reassess if symptoms are not improving. Follow-up guidance is present but not highly specific, and the grammar remains uneven in several sentences.",
+  "pipeline_config": {
+    "asr": {
+      "model": "parakeet"
+    },
+    "note_generation": {
+      "model": "gpt-5",
+      "prompt_style": "detailed"
+    },
+    "preprocessing": {
+      "denoise": "mild",
+      "silence_trimming": "conservative",
+      "vad": "moderate",
+      "voice_enhancement": "on"
+    }
+  },
+  "profile": "intermediate",
+  "quality_band": "medium",
+  "quality_score": 0.74,
+  "transcript": "Clinician/Patient transcript\nPatient reports cough, fever, fatigue, and sore throat for several days. Uses ibuprofen 400 mg as needed. dziekuje.\nSome details on appetite and return guidance captured, although allergy wording is soft. kaszel."
+}

@@ -1,0 +1,479 @@
+{
+  "bakeoff_id": "2026-04-18T13-27-45",
+  "baseline": "baseline",
+  "evaluator_fingerprint": "68a006d5a756",
+  "golden_hash": "29006320a251",
+  "generated_at": "2026-04-18T13:29:39.315518Z",
+  "variants": [
+    {
+      "variant_id": "baseline",
+      "run_count": 1,
+      "pass_rate": 0.0,
+      "pass_rate_ci_low": 0.0,
+      "pass_rate_ci_high": 0.0,
+      "mean_score": 0.3600000000000001,
+      "mean_score_ci_low": 0.3600000000000001,
+      "mean_score_ci_high": 0.3600000000000001,
+      "mean_cost_usd": 0.0,
+      "mean_duration_ms": 30321.0,
+      "failed_run_count": 0,
+      "sample_errors": [],
+      "delta_vs_baseline": null,
+      "delta_ci_low": null,
+      "delta_ci_high": null
+    },
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+      "run_count": 1,
+      "pass_rate": 0.0,
+      "pass_rate_ci_low": 0.0,
+      "pass_rate_ci_high": 0.0,
+      "mean_score": 0.45999999999999996,
+      "mean_score_ci_low": 0.45999999999999996,
+      "mean_score_ci_high": 0.45999999999999996,
+      "mean_cost_usd": 0.0,
+      "mean_duration_ms": 33969.0,
+      "failed_run_count": 0,
+      "sample_errors": [],
+      "delta_vs_baseline": 0.09999999999999987,
+      "delta_ci_low": 0.09999999999999987,
+      "delta_ci_high": 0.09999999999999987
+    },
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+      "run_count": 1,
+      "pass_rate": 1.0,
+      "pass_rate_ci_low": 1.0,
+      "pass_rate_ci_high": 1.0,
+      "mean_score": 0.7600000000000002,
+      "mean_score_ci_low": 0.7600000000000002,
+      "mean_score_ci_high": 0.7600000000000002,
+      "mean_cost_usd": 0.0,
+      "mean_duration_ms": 27454.0,
+      "failed_run_count": 0,
+      "sample_errors": [],
+      "delta_vs_baseline": 0.40000000000000013,
+      "delta_ci_low": 0.40000000000000013,
+      "delta_ci_high": 0.40000000000000013
+    },
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+      "run_count": 1,
+      "pass_rate": 0.0,
+      "pass_rate_ci_low": 0.0,
+      "pass_rate_ci_high": 0.0,
+      "mean_score": 0.45999999999999996,
+      "mean_score_ci_low": 0.45999999999999996,
+      "mean_score_ci_high": 0.45999999999999996,
+      "mean_cost_usd": 0.0,
+      "mean_duration_ms": 22183.0,
+      "failed_run_count": 0,
+      "sample_errors": [],
+      "delta_vs_baseline": 0.09999999999999987,
+      "delta_ci_low": 0.09999999999999987,
+      "delta_ci_high": 0.09999999999999987
+    }
+  ],
+  "per_slice": [
+    {
+      "slice_name": "asr-demo",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.3600000000000001,
+      "delta_vs_baseline": null
+    },
+    {
+      "slice_name": "asr-demo",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    },
+    {
+      "slice_name": "asr-demo",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+      "run_count": 1,
+      "mean_score": 0.7600000000000002,
+      "delta_vs_baseline": 0.40000000000000013
+    },
+    {
+      "slice_name": "asr-demo",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    },
+    {
+      "slice_name": "note",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.3600000000000001,
+      "delta_vs_baseline": null
+    },
+    {
+      "slice_name": "note",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    },
+    {
+      "slice_name": "note",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+      "run_count": 1,
+      "mean_score": 0.7600000000000002,
+      "delta_vs_baseline": 0.40000000000000013
+    },
+    {
+      "slice_name": "note",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    },
+    {
+      "slice_name": "optimization-path",
+      "variant_id": "baseline",
+      "run_count": 1,
+      "mean_score": 0.3600000000000001,
+      "delta_vs_baseline": null
+    },
+    {
+      "slice_name": "optimization-path",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    },
+    {
+      "slice_name": "optimization-path",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+      "run_count": 1,
+      "mean_score": 0.7600000000000002,
+      "delta_vs_baseline": 0.40000000000000013
+    },
+    {
+      "slice_name": "optimization-path",
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+      "run_count": 1,
+      "mean_score": 0.45999999999999996,
+      "delta_vs_baseline": 0.09999999999999987
+    }
+  ],
+  "specialists": [],
+  "improvement_traces": [
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+      "baseline_variant_id": "baseline",
+      "total_delta_vs_baseline": 0.40000000000000013,
+      "steps": [
+        {
+          "variant_id": "baseline-proposal-20260418132531-1",
+          "parent_variant_id": "baseline",
+          "rationale": "Switch to a more robust ASR path and a SOAP-style stronger note model to recover missed clinical details and produce cleaner chart structure on choppy audio.",
+          "hypothesis": "choppy-audio",
+          "judge_justification": null,
+          "delta_vs_parent": null,
+          "delta_vs_baseline": null,
+          "changes": [
+            {
+              "field_path": "description",
+              "before": "Weak baseline deterministic demo with rough language and vague planning.",
+              "after": "Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.",
+              "summary": "description changed from `Weak baseline deterministic demo with rough language and vague planning.` to `Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.`"
+            },
+            {
+              "field_path": "params.pipeline_config.asr.model",
+              "before": "parakeet",
+              "after": "whisper",
+              "summary": "params -> pipeline config -> asr -> model changed from `parakeet` to `whisper`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.model",
+              "before": "gpt-5-mini",
+              "after": "gpt-5",
+              "summary": "params -> pipeline config -> note generation -> model changed from `gpt-5-mini` to `gpt-5`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.prompt_style",
+              "before": "brief",
+              "after": "soap",
+              "summary": "params -> pipeline config -> note generation -> prompt style changed from `brief` to `soap`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.denoise",
+              "before": false,
+              "after": "mild",
+              "summary": "params -> pipeline config -> preprocessing -> denoise changed from `off` to `mild`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "aggressive",
+              "after": "moderate",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `aggressive` to `moderate`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "strict",
+              "after": "balanced",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `strict` to `balanced`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.voice_enhancement",
+              "before": false,
+              "after": "on",
+              "summary": "params -> pipeline config -> preprocessing -> voice enhancement changed from `off` to `on`"
+            }
+          ]
+        },
+        {
+          "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-2",
+          "parent_variant_id": "baseline-proposal-20260418132531-1",
+          "rationale": "Keep the stronger Whisper baseline but shift generation toward fuller chart-ready capture by preserving more quiet context and using a more complete note style.",
+          "hypothesis": "detail recall",
+          "judge_justification": "This is a strong, mostly accurate clinical note that captures the key encounter facts and presents them in a clean SOAP format. Its main weaknesses are modest omissions in assessment/plan nuance and an inappropriate meta-evaluative closing sentence that breaks clinical tone and polish.",
+          "delta_vs_parent": null,
+          "delta_vs_baseline": 0.40000000000000013,
+          "changes": [
+            {
+              "field_path": "params.pipeline_config.note_generation.prompt_style",
+              "before": "soap",
+              "after": "detailed",
+              "summary": "params -> pipeline config -> note generation -> prompt style changed from `soap` to `detailed`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "moderate",
+              "after": "conservative",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `moderate` to `conservative`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "balanced",
+              "after": "moderate",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `balanced` to `moderate`"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+      "baseline_variant_id": "baseline",
+      "total_delta_vs_baseline": 0.09999999999999987,
+      "steps": [
+        {
+          "variant_id": "baseline-proposal-20260418132531-1",
+          "parent_variant_id": "baseline",
+          "rationale": "Switch to a more robust ASR path and a SOAP-style stronger note model to recover missed clinical details and produce cleaner chart structure on choppy audio.",
+          "hypothesis": "choppy-audio",
+          "judge_justification": null,
+          "delta_vs_parent": null,
+          "delta_vs_baseline": null,
+          "changes": [
+            {
+              "field_path": "description",
+              "before": "Weak baseline deterministic demo with rough language and vague planning.",
+              "after": "Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.",
+              "summary": "description changed from `Weak baseline deterministic demo with rough language and vague planning.` to `Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.`"
+            },
+            {
+              "field_path": "params.pipeline_config.asr.model",
+              "before": "parakeet",
+              "after": "whisper",
+              "summary": "params -> pipeline config -> asr -> model changed from `parakeet` to `whisper`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.model",
+              "before": "gpt-5-mini",
+              "after": "gpt-5",
+              "summary": "params -> pipeline config -> note generation -> model changed from `gpt-5-mini` to `gpt-5`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.prompt_style",
+              "before": "brief",
+              "after": "soap",
+              "summary": "params -> pipeline config -> note generation -> prompt style changed from `brief` to `soap`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.denoise",
+              "before": false,
+              "after": "mild",
+              "summary": "params -> pipeline config -> preprocessing -> denoise changed from `off` to `mild`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "aggressive",
+              "after": "moderate",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `aggressive` to `moderate`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "strict",
+              "after": "balanced",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `strict` to `balanced`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.voice_enhancement",
+              "before": false,
+              "after": "on",
+              "summary": "params -> pipeline config -> preprocessing -> voice enhancement changed from `off` to `on`"
+            }
+          ]
+        },
+        {
+          "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-3",
+          "parent_variant_id": "baseline-proposal-20260418132531-1",
+          "rationale": "Test parakeet with recall-friendly cleanup and a detailed note style to improve allergy, vitals, and return-precaution capture without enhancement artifacts.",
+          "hypothesis": "fragmented recordings",
+          "judge_justification": "The artifact captures the broad diagnosis and some core symptoms, but it misses too many clinically important details and return precautions to match the expected note well. Its SOAP structure helps readability, yet the note is weakened by omissions, generic planning, and unprofessional transcript-leakage language.",
+          "delta_vs_parent": null,
+          "delta_vs_baseline": 0.09999999999999987,
+          "changes": [
+            {
+              "field_path": "params.pipeline_config.asr.model",
+              "before": "whisper",
+              "after": "parakeet",
+              "summary": "params -> pipeline config -> asr -> model changed from `whisper` to `parakeet`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.prompt_style",
+              "before": "soap",
+              "after": "detailed",
+              "summary": "params -> pipeline config -> note generation -> prompt style changed from `soap` to `detailed`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.denoise",
+              "before": "mild",
+              "after": "mild",
+              "summary": "params -> pipeline config -> preprocessing -> denoise changed from `mild` to `mild`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "moderate",
+              "after": "conservative",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `moderate` to `conservative`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "balanced",
+              "after": "moderate",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `balanced` to `moderate`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.voice_enhancement",
+              "before": "on",
+              "after": "off",
+              "summary": "params -> pipeline config -> preprocessing -> voice enhancement changed from `on` to `off`"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+      "baseline_variant_id": "baseline",
+      "total_delta_vs_baseline": 0.09999999999999987,
+      "steps": [
+        {
+          "variant_id": "baseline-proposal-20260418132531-1",
+          "parent_variant_id": "baseline",
+          "rationale": "Switch to a more robust ASR path and a SOAP-style stronger note model to recover missed clinical details and produce cleaner chart structure on choppy audio.",
+          "hypothesis": "choppy-audio",
+          "judge_justification": null,
+          "delta_vs_parent": null,
+          "delta_vs_baseline": null,
+          "changes": [
+            {
+              "field_path": "description",
+              "before": "Weak baseline deterministic demo with rough language and vague planning.",
+              "after": "Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.",
+              "summary": "description changed from `Weak baseline deterministic demo with rough language and vague planning.` to `Whisper plus SOAP note generation with balanced cleanup for fragmented recordings.`"
+            },
+            {
+              "field_path": "params.pipeline_config.asr.model",
+              "before": "parakeet",
+              "after": "whisper",
+              "summary": "params -> pipeline config -> asr -> model changed from `parakeet` to `whisper`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.model",
+              "before": "gpt-5-mini",
+              "after": "gpt-5",
+              "summary": "params -> pipeline config -> note generation -> model changed from `gpt-5-mini` to `gpt-5`"
+            },
+            {
+              "field_path": "params.pipeline_config.note_generation.prompt_style",
+              "before": "brief",
+              "after": "soap",
+              "summary": "params -> pipeline config -> note generation -> prompt style changed from `brief` to `soap`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.denoise",
+              "before": false,
+              "after": "mild",
+              "summary": "params -> pipeline config -> preprocessing -> denoise changed from `off` to `mild`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "aggressive",
+              "after": "moderate",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `aggressive` to `moderate`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "strict",
+              "after": "balanced",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `strict` to `balanced`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.voice_enhancement",
+              "before": false,
+              "after": "on",
+              "summary": "params -> pipeline config -> preprocessing -> voice enhancement changed from `off` to `on`"
+            }
+          ]
+        },
+        {
+          "variant_id": "baseline-proposal-20260418132531-1-proposal-20260418132745-1",
+          "parent_variant_id": "baseline-proposal-20260418132531-1",
+          "rationale": "Swap to parakeet and tighten preprocessing to reduce stray multilingual fragments, transcript leakage, and awkward note wording caused by noisy spans.",
+          "hypothesis": "noisy audio",
+          "judge_justification": "This artifact has a recognizable SOAP structure and preserves the broad diagnosis and some major symptoms, but it falls well short of the expected note on factual completeness and clinical polish. The biggest problems are omission of key vitals, exam findings, allergy and medication details, and especially the weak follow-up and missing explicit return precautions. Non-clinical transcript leakage and meta commentary further reduce confidence and chart-readiness.",
+          "delta_vs_parent": null,
+          "delta_vs_baseline": 0.09999999999999987,
+          "changes": [
+            {
+              "field_path": "params.pipeline_config.asr.model",
+              "before": "whisper",
+              "after": "parakeet",
+              "summary": "params -> pipeline config -> asr -> model changed from `whisper` to `parakeet`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.denoise",
+              "before": "mild",
+              "after": "aggressive",
+              "summary": "params -> pipeline config -> preprocessing -> denoise changed from `mild` to `aggressive`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.silence_trimming",
+              "before": "moderate",
+              "after": "aggressive",
+              "summary": "params -> pipeline config -> preprocessing -> silence trimming changed from `moderate` to `aggressive`"
+            },
+            {
+              "field_path": "params.pipeline_config.preprocessing.vad",
+              "before": "balanced",
+              "after": "strict",
+              "summary": "params -> pipeline config -> preprocessing -> vad changed from `balanced` to `strict`"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "regressions": [],
+  "total_cost_usd": 0.0,
+  "total_duration_ms": 113927,
+  "schema_version": 2
+}

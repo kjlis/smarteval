@@ -153,6 +153,19 @@ class ReportingPolicy(BaseModel):
     incremental_summary_every_n_runs: int = 5
 
 
+class ProposalSearchSpace(BaseModel):
+    allowed_values: dict[str, list[Any]] = Field(default_factory=dict)
+
+
+class ProposalDiversityPolicy(BaseModel):
+    require_one_of: list[str] = Field(default_factory=list)
+
+
+class OptimizationPolicy(BaseModel):
+    search_space: ProposalSearchSpace = Field(default_factory=ProposalSearchSpace)
+    diversity: ProposalDiversityPolicy = Field(default_factory=ProposalDiversityPolicy)
+
+
 class Gates(BaseModel):
     min_runs_per_variant: int = 1
     min_runs_warning: int = 1
@@ -218,7 +231,12 @@ class ProposalAttemptRecord(BaseModel):
     source_run_dir: str | None = None
     parent_variant_id: str
     materialized_variant_id: str | None = None
-    status: Literal["accepted", "rejected_exact_duplicate", "rejected_semantic_duplicate"]
+    status: Literal[
+        "accepted",
+        "rejected_exact_duplicate",
+        "rejected_semantic_duplicate",
+        "rejected_invalid_value",
+    ]
     rationale: str
     expected_slice: str | None = None
     diff: dict[str, Any] = Field(default_factory=dict)
@@ -354,6 +372,7 @@ class BakeoffConfig(BaseModel):
     pipeline: list[PipelineStage] = Field(default_factory=list)
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
     reporting: ReportingPolicy = Field(default_factory=ReportingPolicy)
+    optimization: OptimizationPolicy = Field(default_factory=OptimizationPolicy)
     gates: Gates = Field(default_factory=Gates)
     router: str | None = None
     autonomy: dict[str, Any] = Field(default_factory=dict)

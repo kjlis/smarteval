@@ -7,6 +7,7 @@ from smarteval.core.codex_client import build_codex_client
 from smarteval.core.models import VariantProposal
 from smarteval.core.openai_client import build_openai_client
 from smarteval.proposer.dedup import ProposalReview, review_proposals
+from smarteval.proposer.policy import apply_proposal_policy
 
 
 def propose_variants(
@@ -59,7 +60,7 @@ def propose_variants_with_reviews(
     )
     proposals = [VariantProposal.model_validate(_normalize_proposal_item(item)) for item in payload.get("proposals", [])[:n]]
     reviews = review_proposals(proposals, verdicts or [])
-    accepted = [item.proposal for item in reviews if item.status == "accepted"]
+    accepted, reviews = apply_proposal_policy(proposals, reviews, context=context, n=n)
     return accepted, reviews
 
 
@@ -69,7 +70,10 @@ def _proposal_prompt(*, context: dict[str, Any], n: int) -> str:
         "`proposals`, containing a list of objects with keys: parent_variant_id, rationale, diff, expected_slice.\n"
         "Use a short string or null for expected_slice.\n"
         "Each diff must be either a flat object using keys like params.prompt_text, "
-        "params.pipeline_config, generator.model, description, or a nested object under params/generator.\n\n"
+        "params.pipeline_config.asr.model, params.pipeline_config, generator.model, description, "
+        "or a nested object under params/generator.\n"
+        "If Context.optimization.search_space.allowed_values is present, only use those exact values for those fields.\n"
+        "If Context.optimization.diversity.require_one_of is present, ensure at least one proposal changes one of those field paths.\n\n"
         f"Need up to {n} proposals.\n\n"
         f"Context:\n{json.dumps(context, indent=2, sort_keys=True)}"
     )

@@ -1,0 +1,47 @@
+{
+  "dimensions": {
+    "factual_capture": 0.33,
+    "grammar": 0.58,
+    "recommendation_quality": 0.41,
+    "structure": 0.4
+  },
+  "effects": [
+    "profile=baseline",
+    "matched_profile=baseline",
+    "factual_capture=0.33",
+    "grammar=0.58",
+    "structure=0.4",
+    "recommendation_quality=0.41",
+    "asr_model=parakeet",
+    "prompt_style=brief",
+    "language_leakage=Spanish"
+  ],
+  "language_leakage": {
+    "language": "Spanish",
+    "tokens": [
+      "por favor",
+      "tos"
+    ]
+  },
+  "matched_profile": "baseline",
+  "note": "Visit note: patient came because of cough, fever and feeling tired for around 3 days. She say symptoms got worse mostly at night and eating less, but timeline is not very exact because audio was choppy. The patient mention some sore throat and congestion, por favor, and maybe chills too. Current medicine sounded like ibuprofen and cough syrup, though dose not fully captured. Allergy section was unclear in the recording and was not reliable.\n\nAssessment is likely viral illness or other upper respiratory problem. Lungs sounded probably okay from the discussion and there was no obvious emergency issue reported in the call. Note structure is simple and some phrases are rough because transcript was fragmentary.\n\nPlan: advise rest, fluids, symptom meds, and monitor. Can continue home treatment if feeling same or little better. Follow-up if still sick in several days. Return sooner if breathing gets bad or high fever continue, tos. Recommendation quality is limited because exact red flags and allergy details were not all retained.",
+  "pipeline_config": {
+    "asr": {
+      "model": "parakeet"
+    },
+    "note_generation": {
+      "model": "gpt-5-mini",
+      "prompt_style": "brief"
+    },
+    "preprocessing": {
+      "denoise": "off",
+      "silence_trimming": "aggressive",
+      "vad": "strict",
+      "voice_enhancement": "off"
+    }
+  },
+  "profile": "baseline",
+  "quality_band": "low",
+  "quality_score": 0.417,
+  "transcript": "Merged transcript\nPt says cough and fever around some days, por favor, with tired feeling and throat hurt.\nMaybe used meds but exact not always clear. Allergy part partly missed. tos.\nPlan talked about rest and fluids, maybe come back if worse."
+}

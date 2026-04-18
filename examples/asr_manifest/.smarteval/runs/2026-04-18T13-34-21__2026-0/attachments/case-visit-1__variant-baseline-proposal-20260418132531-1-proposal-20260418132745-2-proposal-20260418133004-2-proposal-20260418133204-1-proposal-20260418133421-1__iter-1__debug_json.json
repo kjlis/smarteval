@@ -1,0 +1,43 @@
+{
+  "dimensions": {
+    "factual_capture": 0.91,
+    "grammar": 0.82,
+    "recommendation_quality": 0.81,
+    "structure": 0.71
+  },
+  "effects": [
+    "profile=advanced",
+    "matched_profile=custom",
+    "factual_capture=0.91",
+    "grammar=0.82",
+    "structure=0.71",
+    "recommendation_quality=0.81",
+    "asr_model=whisper",
+    "prompt_style=detailed"
+  ],
+  "language_leakage": {
+    "language": "none",
+    "tokens": []
+  },
+  "matched_profile": "custom",
+  "note": "SOAP Note\nSubjective: Jordan Lee is a 34-year-old adult presenting with persistent cough, fever, and fatigue for 3 days after a household sick contact. Symptoms have been worse at night and include sore throat, nasal congestion, intermittent chills, decreased appetite. The patient has used ibuprofen 400 mg as needed; dextromethorphan syrup at bedtime with partial relief and confirms allergy to penicillin.\n\nObjective: Review of the encounter captured reassuring negatives including no chest pain, no hemoptysis, no shortness of breath at rest. Reported vitals were temperature 38.1 C, heart rate 98 bpm, blood pressure 118/74, and oxygen saturation 98% on room air. Exam descriptors included mild pharyngeal erythema, dry cough during interview, lungs clear to auscultation, no respiratory distress.\n\nAssessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia. The overall picture remains appropriate for outpatient management.\n\nPlan: Supportive care with hydration and rest, continue ibuprofen for fever and pain, and consider honey or throat lozenges for cough relief. Also follow up if symptoms persist beyond 5 to 7 days. Return precautions were reviewed, including seek urgent care for worsening shortness of breath; return for persistent fever above 39 C; re-evaluate if cough becomes productive with chest pain. The note is strong and clinically usable, although it is still slightly less comprehensive and polished than the dedicated golden configuration.",
+  "pipeline_config": {
+    "asr": {
+      "model": "whisper"
+    },
+    "note_generation": {
+      "model": "gpt-5",
+      "prompt_style": "detailed"
+    },
+    "preprocessing": {
+      "denoise": "mild",
+      "silence_trimming": "conservative",
+      "vad": "moderate",
+      "voice_enhancement": "on"
+    }
+  },
+  "profile": "advanced",
+  "quality_band": "high",
+  "quality_score": 0.828,
+  "transcript": "Clinician/Patient transcript\nPatient Jordan Lee describes persistent cough, fever, and fatigue for 3 days with night worsening after a sick household exposure. Associated symptoms include sore throat, nasal congestion, intermittent chills, decreased appetite. Medication use and allergy history were captured clearly, and explicit return precautions were discussed."
+}

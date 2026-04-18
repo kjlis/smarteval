@@ -283,6 +283,44 @@ class RescoreAndProposerTests(unittest.TestCase):
         self.assertEqual(client.models, ["gpt-5.4"])
         self.assertIn("Need up to 1 proposals", client.thread.prompts[0])
 
+    def test_proposer_prompt_includes_optimization_policy(self) -> None:
+        client = FakeCodexClient(
+            json.dumps(
+                {
+                    "proposals": [
+                        {
+                            "parent_variant_id": "baseline",
+                            "rationale": "explore ASR model diversity",
+                            "diff": {"params.pipeline_config.asr.model": "whisper"},
+                            "expected_slice": "asr-demo",
+                        }
+                    ]
+                }
+            )
+        )
+
+        propose_variants(
+            model="gpt-5.4",
+            context={
+                "current_best_variant": {"id": "baseline"},
+                "optimization": {
+                    "search_space": {
+                        "allowed_values": {
+                            "params.pipeline_config.asr.model": ["parakeet", "whisper"],
+                        }
+                    },
+                    "diversity": {"require_one_of": ["params.pipeline_config.asr.model"]},
+                },
+            },
+            n=1,
+            client=client,
+        )
+
+        prompt = client.thread.prompts[0]
+        self.assertIn("allowed_values", prompt)
+        self.assertIn("require_one_of", prompt)
+        self.assertIn("params.pipeline_config.asr.model", prompt)
+
     def test_proposer_supports_explicit_openai_backend(self) -> None:
         client = FakeClient(
             json.dumps(
@@ -360,6 +398,68 @@ class RescoreAndProposerTests(unittest.TestCase):
         self.assertEqual(len(reviews), 1)
         self.assertEqual(reviews[0].status, "rejected_semantic_duplicate")
         self.assertEqual(reviews[0].duplicate_of_variant_id, "dead-1")
+
+    def test_proposer_with_reviews_rejects_disallowed_values(self) -> None:
+        accepted, reviews = propose_variants_with_reviews(
+            model="gpt-5.4",
+            context={
+                "current_best_variant": {"id": "baseline"},
+                "optimization": {
+                    "search_space": {
+                        "allowed_values": {
+                            "params.pipeline_config.asr.model": ["parakeet", "whisper"],
+                        }
+                    }
+                },
+            },
+            backend="openai",
+            client=FakeClient(
+                '{"proposals":[{"parent_variant_id":"baseline","rationale":"try unsupported model","diff":{"params.pipeline_config.asr.model":"nova-asr"},"expected_slice":"asr"}]}'
+            ),
+        )
+
+        self.assertEqual(accepted, [])
+        self.assertEqual(len(reviews), 1)
+        self.assertEqual(reviews[0].status, "rejected_invalid_value")
+
+    def test_proposer_with_reviews_adds_required_diversity_probe(self) -> None:
+        accepted, reviews = propose_variants_with_reviews(
+            model="gpt-5.4",
+            context={
+                "current_best_variant": {
+                    "id": "baseline",
+                    "params": {
+                        "pipeline_config": {
+                            "asr": {"model": "parakeet"},
+                            "note_generation": {"prompt_style": "brief"},
+                        }
+                    },
+                },
+                "optimization": {
+                    "search_space": {
+                        "allowed_values": {
+                            "params.pipeline_config.asr.model": ["parakeet", "whisper"],
+                        }
+                    },
+                    "diversity": {"require_one_of": ["params.pipeline_config.asr.model"]},
+                },
+            },
+            n=2,
+            backend="openai",
+            client=FakeClient(
+                '{"proposals":[{"parent_variant_id":"baseline","rationale":"tighten note style","diff":{"params.pipeline_config.note_generation.prompt_style":"detailed"},"expected_slice":"note"}]}'
+            ),
+        )
+
+        self.assertEqual(len(accepted), 2)
+        self.assertTrue(
+            any(
+                proposal.diff == {"params.pipeline_config.asr.model": "whisper"}
+                and proposal.rationale.startswith("Forced diversity probe:")
+                for proposal in accepted
+            )
+        )
+        self.assertTrue(any(review.status == "accepted" for review in reviews))
 
     def test_cli_propose_persists_and_auto_queues_materialized_variants(self) -> None:
         runner = CliRunner()

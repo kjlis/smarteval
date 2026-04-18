@@ -30,22 +30,67 @@ def apply_variant_diff(variant: Variant, diff: dict) -> None:
         if key == "params":
             if not isinstance(value, dict):
                 raise ValueError("proposal diff key 'params' must map to an object")
-            for nested_key, nested_value in value.items():
-                variant.params[nested_key] = nested_value
+            _deep_merge_mapping(variant.params, value)
             continue
         if key == "generator":
             if not isinstance(value, dict):
                 raise ValueError("proposal diff key 'generator' must map to an object")
             for nested_key, nested_value in value.items():
-                setattr(variant.generator, nested_key, nested_value)
+                _set_object_path(variant.generator, nested_key.split("."), nested_value)
             continue
         if key.startswith("params."):
-            variant.params[key.removeprefix("params.")] = value
+            _set_mapping_path(variant.params, key.removeprefix("params.").split("."), value)
             continue
         if key.startswith("generator."):
-            setattr(variant.generator, key.removeprefix("generator."), value)
+            _set_object_path(variant.generator, key.removeprefix("generator.").split("."), value)
             continue
         if key == "description":
             variant.description = str(value)
             continue
         raise ValueError(f"unsupported proposal diff key {key!r}")
+
+
+def _deep_merge_mapping(target: dict, incoming: dict) -> None:
+    for key, value in incoming.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _deep_merge_mapping(target[key], value)
+            continue
+        target[key] = deepcopy(value)
+
+
+def _set_mapping_path(target: dict, segments: list[str], value) -> None:
+    if not segments:
+        raise ValueError("mapping path must not be empty")
+    if len(segments) == 1:
+        if isinstance(value, dict) and isinstance(target.get(segments[0]), dict):
+            _deep_merge_mapping(target[segments[0]], value)
+            return
+        target[segments[0]] = deepcopy(value)
+        return
+    head, *tail = segments
+    current = target.get(head)
+    if not isinstance(current, dict):
+        current = {}
+        target[head] = current
+    _set_mapping_path(current, tail, value)
+
+
+def _set_object_path(target, segments: list[str], value) -> None:
+    if not segments:
+        raise ValueError("object path must not be empty")
+    if len(segments) == 1:
+        current = getattr(target, segments[0], None)
+        if isinstance(value, dict) and isinstance(current, dict):
+            _deep_merge_mapping(current, value)
+            return
+        setattr(target, segments[0], deepcopy(value))
+        return
+    head, *tail = segments
+    current = getattr(target, head, None)
+    if current is None:
+        current = {}
+        setattr(target, head, current)
+    if isinstance(current, dict):
+        _set_mapping_path(current, tail, value)
+        return
+    _set_object_path(current, tail, value)

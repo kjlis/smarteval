@@ -17,6 +17,7 @@ The proposer sees:
 - low-scoring dimensions
 - recent rejected variants
 - output selection and baseline constraints
+- optimization search-space and diversity policy from the eval config
 
 By default, proposal generation uses local Codex through
 `src/smarteval/proposer/prompter.py`. The same entry point still supports `backend="openai"` as an
@@ -38,6 +39,7 @@ Each proposal is a typed diff:
 Supported diff keys:
 
 - `params.<name>`
+- deep dotted param paths such as `params.pipeline_config.asr.model`
 - `generator.<name>`
 - `description`
 
@@ -108,6 +110,12 @@ Each optimization session:
 5. Materializes and persists accepted child variants into `ledger/variants.jsonl`.
 6. Runs the next focused bakeoff with baseline plus the proposed variants.
 7. Repeats for `N` rounds, or stops early when no accepted proposals remain.
+
+When `optimization.search_space.allowed_values` is configured, the proposer is instructed to stay
+inside that search space and any out-of-range proposals are rejected before materialization. When
+`optimization.diversity.require_one_of` is configured, each round must include at least one proposal
+touching one of those field paths; if the proposer misses that requirement and `allowed_values`
+offers an alternative, the framework synthesizes one exploration proposal automatically.
 
 Run it from the repo root like this:
 

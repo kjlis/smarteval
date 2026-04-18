@@ -60,6 +60,7 @@ def run_pipeline(*, case: Case, params: dict[str, Any]) -> str:
                     "quality_score": debug["quality_score"],
                     "quality_band": debug["quality_band"],
                     "profile": debug["profile"],
+                    "matched_profile": debug["matched_profile"],
                 },
                 "outputs": {
                     "note_txt": {"kind": "text", "uri": "note.txt"},
@@ -104,7 +105,7 @@ def _normalize_denoise(value: Any) -> Any:
     if not isinstance(value, bool):
         return value
     # YAML will parse unquoted `off` as False. Treat a boolean enable as the
-    # mild canonical preset instead of falling through to the custom profile.
+    # mild canonical preset instead of silently downgrading the run quality.
     return "mild" if value else "off"
 
 
@@ -165,8 +166,8 @@ def _build_encounter(case: Case) -> dict[str, Any]:
 
 
 def _simulate(*, encounter: dict[str, Any], pipeline_config: dict[str, Any]) -> dict[str, Any]:
-    profile = _classify_profile(pipeline_config)
-    dimensions = _score_dimensions(pipeline_config, profile)
+    matched_profile = _classify_profile(pipeline_config)
+    dimensions = _score_dimensions(pipeline_config)
     quality_score = round(
         (
             dimensions["factual_capture"] * 0.36
@@ -177,14 +178,22 @@ def _simulate(*, encounter: dict[str, Any], pipeline_config: dict[str, Any]) -> 
         3,
     )
     quality_band = _quality_band(quality_score)
+    profile = _note_profile(quality_score)
     language_leakage = _language_leakage(profile)
-    effects = _build_effects(profile, pipeline_config, dimensions, language_leakage)
+    effects = _build_effects(
+        profile,
+        matched_profile,
+        pipeline_config,
+        dimensions,
+        language_leakage,
+    )
     transcript = _render_transcript(encounter, profile, language_leakage)
     note = _render_note(encounter, profile, language_leakage)
 
     return {
         "pipeline_config": pipeline_config,
         "profile": profile,
+        "matched_profile": matched_profile,
         "quality_score": quality_score,
         "quality_band": quality_band,
         "dimensions": dimensions,
@@ -245,7 +254,7 @@ def _classify_profile(pipeline_config: dict[str, Any]) -> str:
     return "custom"
 
 
-def _score_dimensions(pipeline_config: dict[str, Any], profile: str) -> dict[str, float]:
+def _score_dimensions(pipeline_config: dict[str, Any]) -> dict[str, float]:
     factual = 0.56
     grammar = 0.60
     structure = 0.54
@@ -300,25 +309,6 @@ def _score_dimensions(pipeline_config: dict[str, Any], profile: str) -> dict[str
         structure += 0.14
         recommendations += 0.10
 
-    if profile == "baseline":
-        grammar -= 0.12
-        recommendations -= 0.06
-    elif profile == "intermediate":
-        grammar -= 0.08
-    elif profile == "best":
-        grammar -= 0.05
-        recommendations -= 0.03
-    elif profile == "advanced":
-        factual += 0.04
-        grammar += 0.06
-        structure += 0.05
-        recommendations += 0.04
-    elif profile == "golden":
-        factual += 0.12
-        grammar += 0.14
-        structure += 0.12
-        recommendations += 0.14
-
     values = {
         "factual_capture": factual,
         "grammar": grammar,
@@ -329,13 +319,25 @@ def _score_dimensions(pipeline_config: dict[str, Any], profile: str) -> dict[str
 
 
 def _quality_band(score: float) -> str:
-    if score >= 0.95:
-        return "golden"
     if score >= 0.84:
+        return "golden"
+    if score >= 0.75:
         return "high"
-    if score >= 0.70:
+    if score >= 0.58:
         return "medium"
     return "low"
+
+
+def _note_profile(score: float) -> str:
+    if score >= 0.84:
+        return "golden"
+    if score >= 0.81:
+        return "advanced"
+    if score >= 0.75:
+        return "best"
+    if score >= 0.58:
+        return "intermediate"
+    return "baseline"
 
 
 def _language_leakage(profile: str) -> dict[str, str | list[str]]:
@@ -352,12 +354,14 @@ def _language_leakage(profile: str) -> dict[str, str | list[str]]:
 
 def _build_effects(
     profile: str,
+    matched_profile: str,
     pipeline_config: dict[str, Any],
     dimensions: dict[str, float],
     language_leakage: dict[str, str | list[str]],
 ) -> list[str]:
     effects = [
         f"profile={profile}",
+        f"matched_profile={matched_profile}",
         f"factual_capture={dimensions['factual_capture']}",
         f"grammar={dimensions['grammar']}",
         f"structure={dimensions['structure']}",
@@ -441,7 +445,7 @@ def _render_note(
         return _best_note(encounter, language_leakage)
     if profile == "advanced":
         return _advanced_note(encounter)
-    return _custom_note(encounter)
+    return _baseline_note(encounter, language_leakage)
 
 
 def _baseline_note(encounter: dict[str, Any], leakage: dict[str, str | list[str]]) -> str:
@@ -544,15 +548,6 @@ def _golden_note(encounter: dict[str, Any]) -> str:
         f"{'; '.join(encounter['return_precautions'])}. If the fever pattern worsens, respiratory symptoms escalate, "
         "or oral intake declines further, the patient should be re-evaluated sooner rather than waiting for routine follow-up."
     )
-
-
-def _custom_note(encounter: dict[str, Any]) -> str:
-    return (
-        f"Clinical note for {encounter['patient_name']}: evaluated for {encounter['complaint']} with mixed-quality "
-        "pipeline settings. The note is serviceable but not calibrated to one of the explicit demo profiles."
-    )
-
-
 def _leak_tokens(language_leakage: dict[str, str | list[str]]) -> tuple[str, str]:
     tokens = language_leakage["tokens"]
     if not isinstance(tokens, list) or len(tokens) < 2:

@@ -32,6 +32,11 @@ pipeline_config:
     prompt_style: brief | soap | detailed
 ```
 
+The simulator now scores these parameters continuously and maps the resulting quality score to
+note tiers (`baseline`, `intermediate`, `best`, `advanced`, `golden`). That means "good enough"
+combinations can climb into stronger note outputs without needing an exact preset match. Exact
+named presets are still recorded in `debug.json` as `matched_profile` for traceability.
+
 Runnable eval configs for `smarteval` live in `examples/asr_manifest/`:
 
 - `smarteval.yaml`
@@ -51,6 +56,8 @@ Pipeline-only configs for direct manual runs live in `deterministic_pipeline/con
 - `balanced.yaml`
 - `best.yaml`
 - `golden.yaml`
+
+These are reference starting points, not the only configs that can produce higher-quality notes.
 
 Run the pipeline directly with:
 

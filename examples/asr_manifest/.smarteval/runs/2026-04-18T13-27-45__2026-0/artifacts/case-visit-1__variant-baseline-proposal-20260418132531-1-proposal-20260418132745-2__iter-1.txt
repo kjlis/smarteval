@@ -1,0 +1,8 @@
+SOAP Note
+Subjective: Jordan Lee is a 34-year-old adult presenting with persistent cough, fever, and fatigue for 3 days after a household sick contact. Symptoms have been worse at night and include sore throat, nasal congestion, intermittent chills, decreased appetite. The patient has used ibuprofen 400 mg as needed; dextromethorphan syrup at bedtime with partial relief and confirms allergy to penicillin.
+
+Objective: Review of the encounter captured reassuring negatives including no chest pain, no hemoptysis, no shortness of breath at rest. Reported vitals were temperature 38.1 C, heart rate 98 bpm, blood pressure 118/74, and oxygen saturation 98% on room air. Exam descriptors included mild pharyngeal erythema, dry cough during interview, lungs clear to auscultation, no respiratory distress.
+
+Assessment: Most consistent with a viral upper respiratory infection without current evidence of pneumonia. The overall picture remains appropriate for outpatient management.
+
+Plan: Supportive care with hydration and rest, continue ibuprofen for fever and pain, and consider honey or throat lozenges for cough relief. Also follow up if symptoms persist beyond 5 to 7 days. Return precautions were reviewed, including seek urgent care for worsening shortness of breath; return for persistent fever above 39 C; re-evaluate if cough becomes productive with chest pain. The note is strong and clinically usable, although it is still slightly less comprehensive and polished than the dedicated golden configuration.

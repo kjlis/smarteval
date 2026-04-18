@@ -165,7 +165,7 @@ class DeterministicPipelineTests(unittest.TestCase):
             self.assertIn("debug_json", artifact.attachments)
             self.assertEqual(artifact.metadata["pipeline_name"], "deterministic-asr-demo")
 
-    def test_yaml_boolean_toggles_do_not_fall_through_to_custom_profile(self) -> None:
+    def test_yaml_boolean_toggles_preserve_baseline_quality_tier(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             case = make_case(tmp_dir)
             generator = PipelineGenerator(
@@ -199,6 +199,7 @@ class DeterministicPipelineTests(unittest.TestCase):
                 )
             )
 
+            self.assertEqual(debug_payload["matched_profile"], "baseline")
             self.assertEqual(debug_payload["profile"], "baseline")
             self.assertIn("audio was choppy", artifact.payload)
 
@@ -281,11 +282,46 @@ class DeterministicPipelineTests(unittest.TestCase):
                 baseline_payload["language_leakage"]["language"],
                 intermediate_payload["language_leakage"]["language"],
             )
-            self.assertGreater(golden_payload["dimensions"]["recommendation_quality"], 0.9)
+            self.assertGreaterEqual(golden_payload["dimensions"]["recommendation_quality"], 0.8)
             self.assertLess(baseline_payload["dimensions"]["grammar"], 0.75)
             self.assertIn("return precautions", golden_artifact.payload.lower())
             self.assertIn("por favor", baseline_artifact.payload.lower())
             self.assertIn("dziekuje", intermediate_artifact.payload.lower())
+
+    def test_close_configs_can_reach_stronger_tiers_without_exact_profile_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            case = make_case(tmp_dir)
+            generator = PipelineGenerator(
+                callable="deterministic_pipeline.fake_pipeline:run_pipeline"
+            )
+
+            artifact = generator.generate(
+                case,
+                {
+                    "primary_output": "note_txt",
+                    "pipeline_config": {
+                        "preprocessing": {
+                            "denoise": "mild",
+                            "voice_enhancement": "on",
+                            "silence_trimming": "conservative",
+                            "vad": "moderate",
+                        },
+                        "asr": {"model": "whisper"},
+                        "note_generation": {"model": "gpt-5", "prompt_style": "detailed"},
+                    },
+                },
+            )
+
+            payload = json.loads(
+                Path(artifact.source_run_dir or "").joinpath("debug.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            self.assertEqual(payload["matched_profile"], "custom")
+            self.assertEqual(payload["profile"], "advanced")
+            self.assertEqual(payload["quality_band"], "high")
+            self.assertIn("return precautions", artifact.payload.lower())
 
     def test_demo_eval_configs_exist_for_baseline_starting_point(self) -> None:
         root = Path(__file__).resolve().parent.parent / "examples" / "asr_manifest"
@@ -294,7 +330,7 @@ class DeterministicPipelineTests(unittest.TestCase):
         ):
             self.assertTrue((root / filename).exists(), filename)
 
-    def test_pipeline_normalizes_yaml_booleans_for_profile_matching(self) -> None:
+    def test_pipeline_normalizes_yaml_booleans_for_top_quality_tier(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             case = make_case(tmp_dir)
             generator = PipelineGenerator(
@@ -323,6 +359,7 @@ class DeterministicPipelineTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
+            self.assertEqual(payload["matched_profile"], "golden")
             self.assertEqual(payload["profile"], "golden")
             self.assertEqual(payload["quality_band"], "golden")
 

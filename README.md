@@ -13,6 +13,7 @@
   By default this now lives under `.smarteval/ledger/` next to the config.
 - Supports `resume`, `rescore`, `propose`, `rebaseline`, and `try-new-model`
 - Defaults proposer calls to local Codex, with explicit OpenAI fallback support
+- Lets each eval config define proposer search-space constraints and required diversity probes
 
 ## Quick Start
 

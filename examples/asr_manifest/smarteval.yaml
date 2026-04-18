@@ -4,8 +4,21 @@ baseline: baseline
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
+optimization:
+  search_space:
+    allowed_values:
+      params.pipeline_config.preprocessing.denoise: ["off", mild, aggressive]
+      params.pipeline_config.preprocessing.voice_enhancement: ["off", "on"]
+      params.pipeline_config.preprocessing.silence_trimming: [aggressive, moderate, conservative]
+      params.pipeline_config.preprocessing.vad: [strict, balanced, moderate, basic]
+      params.pipeline_config.asr.model: [parakeet, whisper]
+      params.pipeline_config.note_generation.model: [gpt-5-mini, gpt-5]
+      params.pipeline_config.note_generation.prompt_style: [brief, soap, detailed]
+  diversity:
+    require_one_of:
+      - params.pipeline_config.asr.model
 evaluator:
-  model: gpt-5.4-mini
+  model: gpt-5.4
 variants:
   - id: baseline
     description: Weak baseline deterministic demo with rough language and vague planning.
