@@ -208,6 +208,8 @@ def propose(
     run_dir: Path = typer.Argument(...),
     n: int = 3,
     model: str | None = typer.Option(None),
+    backend: str = typer.Option("codex_local"),
+    codex_bin: str | None = typer.Option(None),
     write: bool = typer.Option(False, help="Persist proposals to the ledger even if autonomy.propose is suggest_only."),
     run_now: bool = typer.Option(False, help="Queue a focused bakeoff for the proposed variants."),
 ) -> None:
@@ -220,6 +222,8 @@ def propose(
         model=model or config.evaluator.model,
         context=context,
         n=n,
+        backend=backend,
+        codex_bin=codex_bin,
         verdicts=ledger["verdicts"],
     )
     persist = write or config.autonomy.get("propose") == "auto_queue"

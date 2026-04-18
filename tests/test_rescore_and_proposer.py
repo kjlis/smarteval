@@ -45,6 +45,38 @@ class FakeClient:
         self.responses = FakeResponses(output_text)
 
 
+class FakeCodexThread:
+    def __init__(self, response_text: str) -> None:
+        self.response_text = response_text
+        self.prompts: list[str] = []
+
+    def run(self, prompt: str):
+        self.prompts.append(prompt)
+        return FakeCodexResult(self.response_text)
+
+
+class FakeCodexResult:
+    def __init__(self, final_response: str) -> None:
+        self.final_response = final_response
+
+
+class FakeCodexClient:
+    def __init__(self, response_text: str) -> None:
+        self.response_text = response_text
+        self.models: list[str] = []
+        self.thread = FakeCodexThread(response_text)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def thread_start(self, *, model: str):
+        self.models.append(model)
+        return self.thread
+
+
 class RescoreAndProposerTests(unittest.TestCase):
     def test_rescore_reuses_artifacts_and_updates_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -216,11 +248,66 @@ class RescoreAndProposerTests(unittest.TestCase):
                     }
                 )
             )
-            proposals = propose_variants(model="gpt-4.1", context=context, n=1, client=client)
+            proposals = propose_variants(
+                model="gpt-4.1",
+                context=context,
+                n=1,
+                backend="openai",
+                client=client,
+            )
 
             self.assertEqual(len(proposals), 1)
             self.assertEqual(proposals[0].parent_variant_id, "baseline")
             self.assertEqual(client.responses.calls[0]["model"], "gpt-4.1")
+
+    def test_proposer_defaults_to_local_codex_backend(self) -> None:
+        client = FakeCodexClient(
+            json.dumps(
+                {
+                    "proposals": [
+                        {
+                            "parent_variant_id": "baseline",
+                            "rationale": "tighten pipeline config",
+                            "diff": {"params.pipeline_config": {"asr": {"model": "whisper"}}},
+                            "expected_slice": "asr-demo",
+                        }
+                    ]
+                }
+            )
+        )
+
+        proposals = propose_variants(model="gpt-5.4", context={"x": 1}, n=1, client=client)
+
+        self.assertEqual(len(proposals), 1)
+        self.assertEqual(client.models, ["gpt-5.4"])
+        self.assertIn("Need up to 1 proposals", client.thread.prompts[0])
+
+    def test_proposer_supports_explicit_openai_backend(self) -> None:
+        client = FakeClient(
+            json.dumps(
+                {
+                    "proposals": [
+                        {
+                            "parent_variant_id": "baseline",
+                            "rationale": "keep openai fallback",
+                            "diff": {"params.prompt_text": "answer carefully"},
+                            "expected_slice": "math",
+                        }
+                    ]
+                }
+            )
+        )
+
+        proposals = propose_variants(
+            model="gpt-4.1",
+            context={"x": 1},
+            n=1,
+            backend="openai",
+            client=client,
+        )
+
+        self.assertEqual(len(proposals), 1)
+        self.assertEqual(client.responses.calls[0]["model"], "gpt-4.1")
 
     def test_cli_propose_persists_and_auto_queues_materialized_variants(self) -> None:
         runner = CliRunner()

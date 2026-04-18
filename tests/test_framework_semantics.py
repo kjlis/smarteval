@@ -144,6 +144,7 @@ class FrameworkSemanticsTests(unittest.TestCase):
         proposals = propose_variants(
             model="gpt-4.1",
             context={"x": 1},
+            backend="openai",
             client=client,
             verdicts=[
                 {
@@ -166,6 +167,7 @@ class FrameworkSemanticsTests(unittest.TestCase):
         proposals = propose_variants(
             model="gpt-4.1",
             context={"x": 1},
+            backend="openai",
             client=FakeClient(
                 '{"proposals":[{"parent_variant_id":"baseline","rationale":"rewrite","diff":{"params.prompt_text":"answer carefully and concisely"},"expected_slice":"math"}]}'
             ),
