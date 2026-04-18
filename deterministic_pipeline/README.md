@@ -34,21 +34,14 @@ pipeline_config:
 
 Runnable eval configs for `smarteval` live in `examples/asr_manifest/`:
 
-- `smarteval_fast.yaml`
-- `smarteval_balanced.yaml`
-- `smarteval_best.yaml`
-- `smarteval_golden.yaml`
+- `smarteval.yaml`
 
-The default `examples/asr_manifest/smarteval.yaml` compares the whole progression from weak baseline
-to golden variant in one run.
+This config starts from the `baseline` variant and is intended as the starting point for iterative
+optimization with `smarteval propose` or `scripts/optimize_loop.py`.
 
 Run them with:
 
 ```bash
-.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_fast.yaml
-.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_balanced.yaml
-.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_best.yaml
-.venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval_golden.yaml
 .venv/bin/python -m smarteval.cli.main run --path examples/asr_manifest/smarteval.yaml
 ```
 

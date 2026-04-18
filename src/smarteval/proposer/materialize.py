@@ -27,6 +27,18 @@ def materialize_proposals(
 
 def _apply_diff(variant: Variant, diff: dict) -> None:
     for key, value in diff.items():
+        if key == "params":
+            if not isinstance(value, dict):
+                raise ValueError("proposal diff key 'params' must map to an object")
+            for nested_key, nested_value in value.items():
+                variant.params[nested_key] = nested_value
+            continue
+        if key == "generator":
+            if not isinstance(value, dict):
+                raise ValueError("proposal diff key 'generator' must map to an object")
+            for nested_key, nested_value in value.items():
+                setattr(variant.generator, nested_key, nested_value)
+            continue
         if key.startswith("params."):
             variant.params[key.removeprefix("params.")] = value
             continue

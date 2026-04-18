@@ -123,6 +123,25 @@ class OpenAIIntegrationTests(unittest.TestCase):
         self.assertTrue(score.passed)
         self.assertEqual(score.raw["usage"]["input_tokens"], 10)
 
+    def test_llm_rubric_scorer_accepts_pre_normalized_dimension_scores(self) -> None:
+        client = FakeClient(
+            '{"dimensions":[{"id":"accuracy","score":0.8,"justification":"ok","failure_mode":null}],"overall_justification":"fine"}'
+        )
+        rubric = Rubric(
+            id="demo",
+            version="1.0.0",
+            dimensions=[RubricDimension(id="accuracy", weight=1.0, prompt="Score accuracy")],
+            pass_threshold=3.5,
+        )
+        scorer = LLMRubricScorer(model="gpt-4.1", rubric=rubric, backend="openai", _client=client)
+        case = Case(id="q3b", input={"question": "Summarize"}, added_at="2026-04-17")
+        artifact = Artifact(kind="text", payload="candidate answer")
+
+        score = scorer.score(case, artifact, ContractResult(passed=True), [])
+
+        self.assertAlmostEqual(score.value or 0.0, 0.8)
+        self.assertTrue(score.passed)
+
     def test_llm_rubric_scorer_defaults_to_local_codex_backend(self) -> None:
         client = FakeCodexClient(
             '{"dimensions":[{"id":"accuracy","score":5,"justification":"strong","failure_mode":null}],"overall_justification":"good"}'

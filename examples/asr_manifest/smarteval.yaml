@@ -1,13 +1,13 @@
 version: 1
 golden_set: golden.jsonl
-baseline: asr-fast
+baseline: baseline
 artifact_selection:
   primary_output: note_txt
   copy_attachments: true
 evaluator:
-  model: gpt-5-mini
+  model: gpt-5.4-mini
 variants:
-  - id: asr-fast
+  - id: baseline
     description: Weak baseline deterministic demo with rough language and vague planning.
     generator:
       kind: pipeline
@@ -24,59 +24,9 @@ variants:
         note_generation:
           model: gpt-5-mini
           prompt_style: brief
-  - id: asr-balanced
-    description: Intermediate deterministic demo with better structure but still uneven language.
-    generator:
-      kind: pipeline
-    params:
-      callable: deterministic_pipeline.fake_pipeline:run_pipeline
-      pipeline_config:
-        preprocessing:
-          denoise: aggressive
-          voice_enhancement: on
-          silence_trimming: conservative
-          vad: basic
-        asr:
-          model: whisper
-        note_generation:
-          model: gpt-5-mini
-          prompt_style: soap
-  - id: asr-best
-    description: Near-best deterministic demo with detailed note formatting but minor leakage.
-    generator:
-      kind: pipeline
-    params:
-      callable: deterministic_pipeline.fake_pipeline:run_pipeline
-      pipeline_config:
-        preprocessing:
-          denoise: mild
-          voice_enhancement: on
-          silence_trimming: conservative
-          vad: basic
-        asr:
-          model: whisper
-        note_generation:
-          model: gpt-5-mini
-          prompt_style: detailed
-  - id: asr-golden
-    description: Golden deterministic demo with the cleanest and most actionable note.
-    generator:
-      kind: pipeline
-    params:
-      callable: deterministic_pipeline.fake_pipeline:run_pipeline
-      pipeline_config:
-        preprocessing:
-          denoise: mild
-          voice_enhancement: on
-          silence_trimming: conservative
-          vad: basic
-        asr:
-          model: whisper
-        note_generation:
-          model: gpt-5
-          prompt_style: detailed
 pipeline:
-  - id: exact
-    kind: exact_match
+  - id: note_quality
+    kind: llm_rubric
+    rubric: rubrics/note_quality.yaml
 reporting:
   formats: [markdown, json]

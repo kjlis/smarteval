@@ -11,6 +11,7 @@ from smarteval.core.models import Artifact, Case
 from smarteval.core.pipeline import execute_scoring_pipeline
 from smarteval.core.runner import run_bakeoff
 from smarteval.proposer.dedup import filter_duplicate_proposals
+from smarteval.proposer.materialize import materialize_proposals
 from smarteval.proposer.prompter import propose_variants
 
 
@@ -182,6 +183,52 @@ class FrameworkSemanticsTests(unittest.TestCase):
             ],
         )
         self.assertEqual(proposals, [])
+
+    def test_materialize_proposals_accepts_nested_params_diff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp = Path(tmp_dir)
+            golden = tmp / "golden.jsonl"
+            golden.write_text(
+                '{"id":"q1","input":{"question":"x"},"expected":{"answer":"ok"},"added_at":"2026-04-17"}\n',
+                encoding="utf-8",
+            )
+            config_path = tmp / "smarteval.yaml"
+            config_path.write_text(
+                textwrap.dedent(
+                    f"""
+                    version: 1
+                    golden_set: {golden}
+                    baseline: baseline
+                    evaluator:
+                      model: gpt-4.1
+                    variants:
+                      - id: baseline
+                        generator:
+                          kind: script
+                        params:
+                          callable: tests.helpers:always_wrong
+                          prompt_text: baseline
+                    pipeline:
+                      - id: exact
+                        kind: exact_match
+                    """
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+
+            proposals = propose_variants(
+                model="gpt-4.1",
+                context={"x": 1},
+                backend="openai",
+                client=FakeClient(
+                    '{"proposals":[{"parent_variant_id":"baseline","rationale":"rewrite params","diff":{"params":{"prompt_text":"answer carefully"}},"expected_slice":"math"}]}'
+                ),
+            )
+
+            materialized = materialize_proposals(config.variants, proposals)
+
+            self.assertEqual(materialized[0].params["prompt_text"], "answer carefully")
 
     def test_embedding_similarity_scorer_returns_normalized_score(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

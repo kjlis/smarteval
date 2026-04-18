@@ -287,13 +287,10 @@ class DeterministicPipelineTests(unittest.TestCase):
             self.assertIn("por favor", baseline_artifact.payload.lower())
             self.assertIn("dziekuje", intermediate_artifact.payload.lower())
 
-    def test_demo_eval_configs_cover_baseline_intermediate_and_golden(self) -> None:
+    def test_demo_eval_configs_exist_for_baseline_starting_point(self) -> None:
         root = Path(__file__).resolve().parent.parent / "examples" / "asr_manifest"
         for filename in (
-            "smarteval_fast.yaml",
-            "smarteval_balanced.yaml",
-            "smarteval_best.yaml",
-            "smarteval_golden.yaml",
+            "smarteval.yaml",
         ):
             self.assertTrue((root / filename).exists(), filename)
 

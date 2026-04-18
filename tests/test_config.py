@@ -83,10 +83,7 @@ class ConfigLoadingTests(unittest.TestCase):
     def test_deterministic_demo_configs_load(self) -> None:
         root = Path(__file__).resolve().parent.parent
         demo_configs = [
-            root / "examples" / "asr_manifest" / "smarteval_fast.yaml",
-            root / "examples" / "asr_manifest" / "smarteval_balanced.yaml",
-            root / "examples" / "asr_manifest" / "smarteval_best.yaml",
-            root / "examples" / "asr_manifest" / "smarteval_golden.yaml",
+            root / "examples" / "asr_manifest" / "smarteval.yaml",
         ]
 
         loaded_ids: list[str] = []
@@ -108,9 +105,9 @@ class ConfigLoadingTests(unittest.TestCase):
             )
             self.assertEqual(params["primary_output"], "note_txt")
 
-        self.assertEqual(loaded_ids, ["asr-fast", "asr-balanced", "asr-best", "asr-golden"])
-        self.assertEqual(prompt_styles, ["brief", "soap", "detailed", "detailed"])
-        self.assertEqual(asr_models, ["parakeet", "whisper", "whisper", "whisper"])
+        self.assertEqual(loaded_ids, ["baseline"])
+        self.assertEqual(prompt_styles, ["brief"])
+        self.assertEqual(asr_models, ["parakeet"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+id: deterministic-asr-note-quality
+version: "1.0.0"
+scale: 5
+pass_threshold: 3.5
+dimensions:
+  - id: factual_capture
+    weight: 0.35
+    prompt: >
+      Judge whether the note preserves the clinically important facts from the case and expected
+      note, including symptom timeline, associated and negative symptoms, medications, allergies,
+      vitals, exam findings, and assessment. Penalize omissions, contradictions, or invented facts.
+    failure_mode_enum: [omission, contradiction, hallucination, vague_summary]
+  - id: structure_and_completeness
+    weight: 0.25
+    prompt: >
+      Judge whether the note is organized as a clear clinical follow-up note with complete sections
+      and enough detail to be actionable. Prefer notes that preserve the expected progression from
+      history to assessment to plan without collapsing details into a terse summary.
+    failure_mode_enum: [missing_section, disorganized, too_brief, incomplete]
+  - id: plan_and_precautions
+    weight: 0.25
+    prompt: >
+      Judge whether the plan and return precautions are concrete, clinically appropriate, and close
+      to the expected note. Reward explicit follow-up guidance, medication guidance, and clear
+      return precautions.
+    failure_mode_enum: [weak_plan, missing_precautions, softened_guidance, generic_followup]
+  - id: clinical_style
+    weight: 0.15
+    prompt: >
+      Judge whether the note uses precise, professional clinical language that matches the expected
+      note in clarity and specificity. Penalize awkward phrasing, leakage, or generic wording that
+      reduces confidence in the note.
+    failure_mode_enum: [awkward_language, imprecise_wording, tone_mismatch]

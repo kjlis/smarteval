@@ -309,6 +309,33 @@ class RescoreAndProposerTests(unittest.TestCase):
         self.assertEqual(len(proposals), 1)
         self.assertEqual(client.responses.calls[0]["model"], "gpt-4.1")
 
+    def test_proposer_coerces_non_string_expected_slice(self) -> None:
+        client = FakeClient(
+            json.dumps(
+                {
+                    "proposals": [
+                        {
+                            "parent_variant_id": "baseline",
+                            "rationale": "keep richer slice context",
+                            "diff": {"params.prompt_text": "answer carefully"},
+                            "expected_slice": {"tags": ["math", "hard"]},
+                        }
+                    ]
+                }
+            )
+        )
+
+        proposals = propose_variants(
+            model="gpt-4.1",
+            context={"x": 1},
+            n=1,
+            backend="openai",
+            client=client,
+        )
+
+        self.assertEqual(len(proposals), 1)
+        self.assertEqual(proposals[0].expected_slice, '{"tags": ["math", "hard"]}')
+
     def test_cli_propose_persists_and_auto_queues_materialized_variants(self) -> None:
         runner = CliRunner()
         with tempfile.TemporaryDirectory() as tmp_dir:

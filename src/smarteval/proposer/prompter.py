@@ -31,7 +31,7 @@ def propose_variants(
         codex_bin=codex_bin,
         client=client,
     )
-    proposals = [VariantProposal.model_validate(item) for item in payload.get("proposals", [])[:n]]
+    proposals = [VariantProposal.model_validate(_normalize_proposal_item(item)) for item in payload.get("proposals", [])[:n]]
     if verdicts:
         proposals = filter_duplicate_proposals(proposals, verdicts)
     return proposals
@@ -40,10 +40,23 @@ def propose_variants(
 def _proposal_prompt(*, context: dict[str, Any], n: int) -> str:
     return (
         "You are proposing new eval variants. Return valid JSON with a top-level key "
-        "`proposals`, containing a list of objects with keys: parent_variant_id, rationale, diff, expected_slice.\n\n"
+        "`proposals`, containing a list of objects with keys: parent_variant_id, rationale, diff, expected_slice.\n"
+        "Use a short string or null for expected_slice.\n"
+        "Each diff must be either a flat object using keys like params.prompt_text, "
+        "params.pipeline_config, generator.model, description, or a nested object under params/generator.\n\n"
         f"Need up to {n} proposals.\n\n"
         f"Context:\n{json.dumps(context, indent=2, sort_keys=True)}"
     )
+
+
+def _normalize_proposal_item(item: Any) -> Any:
+    if not isinstance(item, dict):
+        return item
+    normalized = dict(item)
+    expected_slice = normalized.get("expected_slice")
+    if expected_slice is not None and not isinstance(expected_slice, str):
+        normalized["expected_slice"] = json.dumps(expected_slice, sort_keys=True)
+    return normalized
 
 
 def _request_payload(

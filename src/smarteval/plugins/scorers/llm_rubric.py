@@ -91,7 +91,8 @@ class LLMRubricScorer(Scorer):
         return (
             "You are grading an evaluation artifact.\n"
             "Return valid JSON with keys: dimensions, overall_justification.\n"
-            "Each dimensions entry must contain: id, score, justification, failure_mode.\n\n"
+            "Each dimensions entry must contain: id, score, justification, failure_mode.\n"
+            "Use the rubric's 1-to-5 score scale directly. Do not normalize scores to 0..1.\n\n"
             "Rubric:\n"
             "{rubric_json}\n\n"
             "Case:\n{input_json}\n\n"
@@ -128,5 +129,7 @@ def _normalize_rubric_score(payload: dict[str, Any], rubric: Rubric) -> float:
         dimension = dimensions_by_id.get(item["id"])
         if dimension is None:
             continue
-        total += (float(item["score"]) / rubric.scale) * dimension.weight
+        raw_score = float(item["score"])
+        normalized = raw_score if 0.0 <= raw_score < 1.0 else (raw_score / rubric.scale)
+        total += normalized * dimension.weight
     return total
