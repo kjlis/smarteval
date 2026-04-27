@@ -1,0 +1,8 @@
+id: baseline
+name: Current behavior
+strategy: baseline
+hypothesis: Current target behavior before changes.
+changes:
+  - No changes.
+expected_improvement: []
+risk: []

@@ -1,0 +1,25 @@
+{
+  "smarteval_version": "0.1.0",
+  "eval_schema_version": "1",
+  "eval_name": "demo",
+  "run_id": "2026-04-27T19-04-28-050Z-dy7usd",
+  "candidate_id": "baseline",
+  "created_at": "2026-04-27T19:04:28.120Z",
+  "target": {
+    "type": "command",
+    "command": [
+      "node",
+      "target.js"
+    ],
+    "timeout_ms": 5000
+  },
+  "dataset_path": ".smarteval/evals/demo/dataset.jsonl",
+  "dataset_hash": "b49194efc547421370591e5eabdae71fde17628563108a140c613e6b80001310",
+  "git": {
+    "commit": "64c263c71621dcdf4feb925f21a05c4857e8fd27",
+    "dirty": true
+  },
+  "warnings": [
+    "Dataset has fewer than 5 examples."
+  ]
+}

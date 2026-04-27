@@ -1,0 +1,233 @@
+import { z } from "zod";
+
+const jsonValue: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValue),
+    z.record(z.string(), jsonValue)
+  ])
+);
+
+export const commandTargetSchema = z.object({
+  type: z.literal("command"),
+  command: z.array(z.string()).min(1),
+  timeout_ms: z.number().int().positive().optional()
+});
+
+export const pythonFunctionTargetSchema = z.object({
+  type: z.literal("python_function"),
+  entrypoint: z.string().min(1),
+  timeout_ms: z.number().int().positive().optional()
+});
+
+export const nodeFunctionTargetSchema = z.object({
+  type: z.literal("node_function"),
+  entrypoint: z.string().min(1),
+  timeout_ms: z.number().int().positive().optional()
+});
+
+export const targetSchema = z.discriminatedUnion("type", [
+  commandTargetSchema,
+  pythonFunctionTargetSchema,
+  nodeFunctionTargetSchema
+]);
+
+const weighted = {
+  weight: z.number().positive()
+};
+
+export const evaluatorConfigSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("json_validity"), ...weighted }),
+  z.object({
+    type: z.literal("json_required_fields"),
+    fields: z.array(z.string()).min(1),
+    ...weighted
+  }),
+  z.object({ type: z.literal("contains"), value: z.string().min(1), ...weighted }),
+  z.object({
+    type: z.literal("not_contains"),
+    value: z.string().min(1),
+    ...weighted
+  }),
+  z.object({ type: z.literal("regex"), pattern: z.string().min(1), ...weighted }),
+  z.object({ type: z.literal("max_words"), max: z.number().int().nonnegative(), ...weighted }),
+  z.object({ type: z.literal("max_chars"), max: z.number().int().nonnegative(), ...weighted }),
+  z.object({ type: z.literal("min_words"), min: z.number().int().nonnegative(), ...weighted }),
+  z.object({ type: z.literal("exact_match"), ...weighted }),
+  z.object({ type: z.literal("field_match"), field: z.string().min(1), ...weighted }),
+  z.object({ type: z.literal("latency"), max_ms: z.number().int().positive().optional(), ...weighted }),
+  z.object({ type: z.literal("error_rate"), ...weighted }),
+  z.object({ type: z.literal("timeout_count"), ...weighted }),
+  z.object({
+    type: z.literal("llm_judge"),
+    provider: z.string().min(1).optional(),
+    model: z.string().min(1).optional(),
+    rubric: z.string().min(1),
+    ...weighted
+  }),
+  z.object({
+    type: z.literal("command_judge"),
+    command: z.array(z.string()).min(1),
+    ...weighted
+  })
+]);
+
+export const evalConfigSchema = z.object({
+  schema_version: z.string().default("1"),
+  name: z.string().regex(/^[A-Za-z0-9_-]+$/),
+  objective: z.object({
+    description: z.string().min(1)
+  }),
+  target: targetSchema,
+  inputs: z.object({
+    dataset: z.string().min(1)
+  }),
+  allowed_levers: z.array(z.string()).default([]),
+  fixed_constraints: z.array(z.string()).default([]),
+  scoring_vectors: z.record(z.string(), evaluatorConfigSchema).refine(
+    (vectors) => Object.keys(vectors).length > 0,
+    "At least one scoring vector is required."
+  ),
+  experiment_budget: z
+    .object({
+      iterations: z.number().int().positive().optional(),
+      candidates_per_iteration: z.number().int().positive().optional(),
+      max_cost_usd: z.number().nonnegative().optional()
+    })
+    .default({})
+});
+
+export const datasetRowSchema = z.object({
+  id: z.string().min(1),
+  input: jsonValue,
+  reference: jsonValue.optional(),
+  tags: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+  split: z.enum(["dev", "validation", "holdout"]).optional()
+});
+
+export const candidateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  strategy: z.string().min(1),
+  hypothesis: z.string().min(1),
+  changes: z.array(z.string()).min(1),
+  expected_improvement: z.array(z.string()).default([]),
+  risk: z.array(z.string()).default([])
+});
+
+export const metricResultSchema = z.object({
+  score: z.number().min(0).max(1),
+  passed: z.boolean(),
+  rationale: z.string()
+});
+
+export const runResultRowSchema = z.object({
+  example_id: z.string().min(1),
+  input: jsonValue,
+  reference: jsonValue.optional(),
+  output: z.string(),
+  stdout: z.string(),
+  stderr: z.string(),
+  status: z.enum(["passed", "failed", "timeout"]),
+  latency_ms: z.number().nonnegative(),
+  error: z.string().optional(),
+  metrics: z.record(z.string(), metricResultSchema)
+});
+
+export const aggregateMetricSchema = z.object({
+  score: z.number().min(0).max(1),
+  weight: z.number().positive(),
+  passed: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative()
+});
+
+export const aggregateScoreSchema = z.object({
+  overall_score: z.number().min(0).max(1),
+  example_count: z.number().int().nonnegative(),
+  metrics: z.record(z.string(), aggregateMetricSchema),
+  runtime: z.object({
+    average_latency_ms: z.number().nonnegative(),
+    error_rate: z.number().min(0).max(1),
+    timeout_count: z.number().int().nonnegative()
+  })
+});
+
+export const runManifestSchema = z.object({
+  smarteval_version: z.string(),
+  eval_schema_version: z.string(),
+  eval_name: z.string(),
+  run_id: z.string(),
+  candidate_id: z.string(),
+  created_at: z.string(),
+  target: targetSchema,
+  dataset_path: z.string(),
+  dataset_hash: z.string(),
+  git: z.object({
+    commit: z.string(),
+    dirty: z.boolean()
+  }),
+  judge: z
+    .object({
+      provider: z.string().optional(),
+      model: z.string().optional(),
+      reproducibility: z.string().optional()
+    })
+    .optional(),
+  warnings: z.array(z.string()).default([])
+});
+
+export const reportInputSchema = z.object({
+  manifest: runManifestSchema,
+  baseline: aggregateScoreSchema.optional(),
+  candidate: aggregateScoreSchema,
+  comparison: z
+    .object({
+      overall_delta: z.number(),
+      metrics: z.record(
+        z.string(),
+        z.object({
+          baseline: z.number(),
+          candidate: z.number(),
+          delta: z.number()
+        })
+      ),
+      regressions: z.array(z.string())
+    })
+    .optional()
+});
+
+export type CommandTarget = z.infer<typeof commandTargetSchema>;
+export type Target = z.infer<typeof targetSchema>;
+export type EvalConfig = z.infer<typeof evalConfigSchema>;
+export type DatasetRow = z.infer<typeof datasetRowSchema>;
+export type Candidate = z.infer<typeof candidateSchema>;
+export type EvaluatorConfig = z.infer<typeof evaluatorConfigSchema>;
+export type MetricResult = z.infer<typeof metricResultSchema>;
+export type RunResultRow = z.infer<typeof runResultRowSchema>;
+export type AggregateScore = z.infer<typeof aggregateScoreSchema>;
+export type RunManifest = z.infer<typeof runManifestSchema>;
+export type ReportInput = z.infer<typeof reportInputSchema>;
+
+export function parseJsonl<T>(content: string, schema: z.ZodType<T>): T[] {
+  return content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(line);
+      } catch (error) {
+        throw new Error(`Invalid JSONL on line ${index + 1}: ${(error as Error).message}`);
+      }
+      const result = schema.safeParse(parsed);
+      if (!result.success) {
+        throw new Error(`Invalid JSONL row on line ${index + 1}: ${result.error.message}`);
+      }
+      return result.data;
+    });
+}

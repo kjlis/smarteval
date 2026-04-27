@@ -1,0 +1,35 @@
+{
+  "name": "smarteval",
+  "version": "0.1.0",
+  "description": "Repo-local evaluation loop for controlled AI behavior changes.",
+  "type": "module",
+  "bin": {
+    "smarteval": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "ci": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

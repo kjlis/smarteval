@@ -4,107 +4,109 @@ Working checklist for implementation. Keep this file practical and update it as 
 
 ## Phase 0: Project Skeleton
 
-- [ ] Create TypeScript package structure.
-- [ ] Add CLI entrypoint.
-- [ ] Add test runner and lint/typecheck commands.
-- [ ] Add config/schema validation dependency, likely Zod.
-- [ ] Add fixtures directory for sample evals.
-- [ ] Add minimal README usage path.
+- [x] Create TypeScript package structure.
+- [x] Add CLI entrypoint.
+- [x] Add test runner and lint/typecheck commands.
+- [x] Add config/schema validation dependency, likely Zod.
+- [x] Add fixtures directory for sample evals.
+- [x] Add minimal README usage path.
 
 ## Phase 1: Artifact Schemas
 
-- [ ] Define `eval.yaml` schema.
-- [ ] Define dataset JSONL row schema.
-- [ ] Define candidate schema.
-- [ ] Define run manifest schema.
-- [ ] Define per-example result schema.
-- [ ] Define aggregate score schema.
-- [ ] Define report input model.
-- [ ] Implement `smarteval validate`.
-- [ ] Add schema tests with valid and invalid fixtures.
+- [x] Define `eval.yaml` schema.
+- [x] Define dataset JSONL row schema.
+- [x] Define candidate schema.
+- [x] Define run manifest schema.
+- [x] Define per-example result schema.
+- [x] Define aggregate score schema.
+- [x] Define report input model.
+- [x] Implement `smarteval validate`.
+- [x] Add schema tests with valid and invalid fixtures.
 
 ## Phase 2: Core Runner
 
-- [ ] Implement repo root / `.smarteval` discovery.
-- [ ] Implement eval loader.
-- [ ] Implement JSONL dataset loader.
-- [ ] Implement command target adapter first.
-- [ ] Add process timeout handling.
-- [ ] Capture stdout/stderr/error status per example.
-- [ ] Write run artifacts under `.smarteval/evals/<name>/runs/<run_id>/`.
-- [ ] Add baseline run support.
-- [ ] Add candidate run support.
+- [x] Implement repo root / `.smarteval` discovery.
+- [x] Implement eval loader.
+- [x] Implement JSONL dataset loader.
+- [x] Implement command target adapter first.
+- [x] Add process timeout handling.
+- [x] Capture stdout/stderr/error status per example.
+- [x] Write run artifacts under `.smarteval/evals/<name>/runs/<run_id>/`.
+- [x] Add baseline run support.
+- [x] Add candidate run support.
 
 ## Phase 3: Evaluators
 
-- [ ] Implement evaluator interface.
-- [ ] Implement deterministic JSON validity check.
-- [ ] Implement JSON schema / required field check.
-- [ ] Implement regex / contains / not-contains checks.
-- [ ] Implement word/character length checks.
-- [ ] Implement runtime metrics: latency, error rate, timeout count.
-- [ ] Implement reference-based exact/field match.
-- [ ] Add evaluator tests.
+- [x] Implement evaluator interface.
+- [x] Implement deterministic JSON validity check.
+- [x] Implement JSON schema / required field check.
+- [x] Implement regex / contains / not-contains checks.
+- [x] Implement word/character length checks.
+- [x] Implement runtime metrics: latency, error rate, timeout count.
+- [x] Implement reference-based exact/field match.
+- [x] Add evaluator tests.
 
 ## Phase 4: Judge Providers
 
-- [ ] Define `JudgeProvider` interface.
-- [ ] Define structured judge output contract.
-- [ ] Implement OpenRouter judge provider first.
-- [ ] Add structured-output parsing and repair/failure handling.
+- [x] Define `JudgeProvider` interface.
+- [x] Define structured judge output contract.
+- [x] Implement OpenRouter judge provider first.
+- [x] Add structured-output parsing and repair/failure handling.
 - [ ] Store judge model/provider/rubric/raw response metadata.
 - [ ] Implement Codex SDK judge provider.
 - [ ] Implement Claude Agent SDK judge provider using V2 preview behind adapter.
-- [ ] Add `command` judge provider.
+- [x] Add `command` judge provider.
 - [ ] Add local-agent reproducibility warnings in run metadata/report.
+
+Note: provider interfaces, OpenRouter, and command judging are implemented. Codex/Claude SDK adapters are reserved behind provider classes with actionable errors until SDK dependencies are added and wired into the runner.
 
 ## Phase 5: Scoring and Comparison
 
-- [ ] Implement metric weighting.
-- [ ] Preserve per-metric scores separately from aggregate.
-- [ ] Compare baseline vs candidate.
-- [ ] Detect regressions by metric.
-- [ ] Detect cost/latency regressions.
+- [x] Implement metric weighting.
+- [x] Preserve per-metric scores separately from aggregate.
+- [x] Compare baseline vs candidate.
+- [x] Detect regressions by metric.
+- [x] Detect cost/latency regressions.
 - [ ] Add simple failure clustering by evaluator failure/tag.
-- [ ] Add comparison tests.
+- [x] Add comparison tests.
 
 ## Phase 6: Reports
 
-- [ ] Generate markdown report.
-- [ ] Include target, dataset, candidate, run metadata.
-- [ ] Include baseline score and candidate score.
-- [ ] Include per-metric movement.
-- [ ] Include regressions and limitations.
-- [ ] Warn on weak datasets.
+- [x] Generate markdown report.
+- [x] Include target, dataset, candidate, run metadata.
+- [x] Include baseline score and candidate score.
+- [x] Include per-metric movement.
+- [x] Include regressions and limitations.
+- [x] Warn on weak datasets.
 - [ ] Warn on judge-heavy wins.
-- [ ] Include recommended next action.
+- [x] Include recommended next action.
 
 ## Phase 7: Planning and Candidate UX
 
-- [ ] Implement `smarteval init`.
-- [ ] Implement `smarteval plan`.
-- [ ] Implement `smarteval dataset add`.
-- [ ] Implement `smarteval propose`.
-- [ ] Implement `smarteval apply <candidate> --dry-run`.
-- [ ] Keep all generated plans/candidates human-editable.
+- [x] Implement `smarteval init`.
+- [x] Implement `smarteval plan`.
+- [x] Implement `smarteval dataset add`.
+- [x] Implement `smarteval propose`.
+- [x] Implement `smarteval apply <candidate> --dry-run`.
+- [x] Keep all generated plans/candidates human-editable.
 
 ## Phase 8: Agent Pack
 
-- [ ] Add `AGENTS.md` snippet template.
-- [ ] Add `CLAUDE.md` snippet template.
-- [ ] Add Claude skill template.
-- [ ] Add Codex skill template.
-- [ ] Add rubric/report template references.
-- [ ] Add install/copy command for agent pack.
+- [x] Add `AGENTS.md` snippet template.
+- [x] Add `CLAUDE.md` snippet template.
+- [x] Add Claude skill template.
+- [x] Add Codex skill template.
+- [x] Add rubric/report template references.
+- [x] Add install/copy command for agent pack.
 
 ## Phase 9: Hardening
 
 - [ ] Add cost caps for judge providers.
 - [ ] Add concurrency controls.
 - [ ] Add credential checks and actionable errors.
-- [ ] Add `smarteval doctor`.
-- [ ] Add dirty-worktree / git commit metadata.
-- [ ] Add CI smoke command.
+- [x] Add `smarteval doctor`.
+- [x] Add dirty-worktree / git commit metadata.
+- [x] Add CI smoke command.
 - [ ] Add fixture-based end-to-end test.
 
 ## Deferred

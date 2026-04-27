@@ -1,0 +1,33 @@
+schema_version: "1"
+name: demo
+objective:
+  description: Evaluate a target that returns JSON with an answer field.
+target:
+  type: command
+  command:
+    - node
+    - target.js
+  timeout_ms: 5000
+inputs:
+  dataset: .smarteval/evals/demo/dataset.jsonl
+allowed_levers:
+  - prompt
+fixed_constraints:
+  - output_must_be_json
+scoring_vectors:
+  valid_json:
+    type: json_validity
+    weight: 0.4
+  has_answer:
+    type: json_required_fields
+    fields:
+      - answer
+    weight: 0.4
+  latency:
+    type: latency
+    max_ms: 1000
+    weight: 0.2
+experiment_budget:
+  iterations: 1
+  candidates_per_iteration: 1
+  max_cost_usd: 0

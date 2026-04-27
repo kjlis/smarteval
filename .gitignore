@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.smarteval/evals/*/runs/
+.smarteval/evals/*/reports/
+*.log

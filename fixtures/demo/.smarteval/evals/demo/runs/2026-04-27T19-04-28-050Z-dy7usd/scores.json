@@ -1,0 +1,29 @@
+{
+  "overall_score": 1,
+  "example_count": 1,
+  "metrics": {
+    "valid_json": {
+      "score": 1,
+      "weight": 0.4,
+      "passed": 1,
+      "failed": 0
+    },
+    "has_answer": {
+      "score": 1,
+      "weight": 0.4,
+      "passed": 1,
+      "failed": 0
+    },
+    "latency": {
+      "score": 1,
+      "weight": 0.2,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "runtime": {
+    "average_latency_ms": 66.942958,
+    "error_rate": 0,
+    "timeout_count": 0
+  }
+}

@@ -1,0 +1,1 @@
+{"id":"case_001","input":{"text":"hello"},"reference":{"answer":"hello"},"tags":["smoke"],"notes":"Minimal smoke example."}
