@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  ClaudeAgentSdkJudgeProvider,
+  CodexSdkJudgeProvider,
   CommandJudgeProvider,
   parseJudgeOutput,
   providerReproducibilityWarning
@@ -52,5 +54,58 @@ describe("judge providers", () => {
     expect(providerReproducibilityWarning("codex_sdk")).toContain("local agent");
     expect(providerReproducibilityWarning("claude_agent_sdk")).toContain("local agent");
     expect(providerReproducibilityWarning("openrouter_api")).toContain("API-backed");
+  });
+
+  test("scores with Codex SDK provider through an optional dynamic adapter", async () => {
+    const provider = new CodexSdkJudgeProvider(
+      { model: "gpt-5.3-codex" },
+      async () => ({
+        Codex: class {
+          async startThread() {
+            return {
+              async run() {
+                return {
+                  result:
+                    '{"score":0.8,"passed":true,"rationale":"codex accepted","confidence":0.7}'
+                };
+              }
+            };
+          }
+        }
+      })
+    );
+
+    const result = await provider.score({
+      example: { id: "case_001", input: {}, tags: [] },
+      output: "ok",
+      rubric: "Pass if ok."
+    });
+
+    expect(result.provider).toBe("codex_sdk");
+    expect(result.score).toBe(0.8);
+    expect(result.rationale).toBe("codex accepted");
+  });
+
+  test("scores with Claude Agent SDK V2 provider through an optional dynamic adapter", async () => {
+    const provider = new ClaudeAgentSdkJudgeProvider(
+      { model: "claude-sonnet-4-5" },
+      async () => ({
+        unstable_v2_prompt: async () => ({
+          subtype: "success",
+          result:
+            '{"score":0.9,"passed":true,"rationale":"claude accepted","confidence":0.8}'
+        })
+      })
+    );
+
+    const result = await provider.score({
+      example: { id: "case_001", input: {}, tags: [] },
+      output: "ok",
+      rubric: "Pass if ok."
+    });
+
+    expect(result.provider).toBe("claude_agent_sdk");
+    expect(result.score).toBe(0.9);
+    expect(result.rationale).toBe("claude accepted");
   });
 });

@@ -46,4 +46,9 @@ Command targets receive one dataset row as JSON on stdin and should print the ta
 
 ## MVP scope
 
-This implementation supports command targets, JSONL datasets, deterministic evaluators, runtime metrics, baseline/candidate run artifacts, comparison, markdown reports, and agent-pack templates. Python and Node function targets, LLM judge providers, and agent SDK judges are represented in schemas but should be wrapped with command targets until their adapters are implemented.
+This implementation supports command targets, JSONL datasets, deterministic evaluators, runtime metrics, baseline/candidate run artifacts, comparison, markdown reports, OpenRouter judges, command judges, optional Codex/Claude SDK judges, and agent-pack templates. Python and Node function targets are represented in schemas but should be wrapped with command targets until their adapters are implemented.
+
+Optional judge SDKs are loaded dynamically:
+
+- `codex_sdk` expects `@openai/codex-sdk`.
+- `claude_agent_sdk` expects `@anthropic-ai/claude-agent-sdk`.

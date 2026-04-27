@@ -66,11 +66,14 @@ export const evaluatorConfigSchema = z.discriminatedUnion("type", [
     provider: z.string().min(1).optional(),
     model: z.string().min(1).optional(),
     rubric: z.string().min(1),
+    estimated_cost_usd: z.number().nonnegative().optional(),
     ...weighted
   }),
   z.object({
     type: z.literal("command_judge"),
     command: z.array(z.string()).min(1),
+    rubric: z.string().min(1),
+    estimated_cost_usd: z.number().nonnegative().optional(),
     ...weighted
   })
 ]);
@@ -122,13 +125,19 @@ export const candidateSchema = z.object({
 export const metricResultSchema = z.object({
   score: z.number().min(0).max(1),
   passed: z.boolean(),
-  rationale: z.string()
+  rationale: z.string(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  raw_response: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export const runResultRowSchema = z.object({
   example_id: z.string().min(1),
   input: jsonValue,
   reference: jsonValue.optional(),
+  tags: z.array(z.string()).default([]),
   output: z.string(),
   stdout: z.string(),
   stderr: z.string(),
@@ -175,6 +184,39 @@ export const runManifestSchema = z.object({
       provider: z.string().optional(),
       model: z.string().optional(),
       reproducibility: z.string().optional()
+    })
+    .optional(),
+  judges: z
+    .array(
+      z.object({
+        metric: z.string(),
+        provider: z.string(),
+        model: z.string().optional(),
+        rubric: z.string().optional(),
+        reproducibility: z.string()
+      })
+    )
+    .default([]),
+  estimated_cost_usd: z.number().nonnegative().default(0),
+  failures_summary: z
+    .object({
+      total_failed_examples: z.number().int().nonnegative(),
+      by_metric: z.record(
+        z.string(),
+        z.object({
+          count: z.number().int().nonnegative(),
+          examples: z.array(z.string()),
+          tags: z.record(z.string(), z.number().int().nonnegative())
+        })
+      ),
+      by_tag: z.record(
+        z.string(),
+        z.object({
+          count: z.number().int().nonnegative(),
+          examples: z.array(z.string()),
+          metrics: z.record(z.string(), z.number().int().nonnegative())
+        })
+      )
     })
     .optional(),
   warnings: z.array(z.string()).default([])

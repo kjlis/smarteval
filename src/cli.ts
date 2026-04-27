@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { parse, stringify } from "yaml";
 import { findRepoRoot, pathExists, readEvalConfig, resolveEvalFile, writeYaml } from "./config.js";
+import { runDoctor } from "./doctor.js";
 import { compareAggregates, generateMarkdownReport } from "./report.js";
 import { runEvaluation } from "./runner.js";
 import {
@@ -142,11 +143,19 @@ program
   .option("--eval <name>", "eval name")
   .option("--baseline", "run baseline")
   .option("--candidate <id>", "candidate id")
-  .action(async (options: { eval?: string; baseline?: boolean; candidate?: string }) => {
+  .option("--max-cost-usd <amount>", "maximum estimated judge cost in USD")
+  .option("--concurrency <count>", "number of examples to run at once", "1")
+  .action(async (options: { eval?: string; baseline?: boolean; candidate?: string; maxCostUsd?: string; concurrency: string }) => {
     const root = await findRepoRoot();
     const config = await readEvalConfig(await resolveEvalFile(root, options.eval));
     const candidateId = options.candidate ?? (options.baseline ? "baseline" : "current");
-    const run = await runEvaluation({ root, config, candidateId });
+    const run = await runEvaluation({
+      root,
+      config,
+      candidateId,
+      maxCostUsd: options.maxCostUsd === undefined ? undefined : Number.parseFloat(options.maxCostUsd),
+      concurrency: Number.parseInt(options.concurrency, 10)
+    });
     console.log(`Wrote ${run.runDir}`);
     console.log(`Overall score: ${(run.scores.overall_score * 100).toFixed(1)}%`);
   });
@@ -238,11 +247,12 @@ program
 
 program.command("doctor").description("Check local Smarteval setup.").action(async () => {
   const root = await findRepoRoot();
-  const hasConfig = await pathExists(join(root, ".smarteval", "config.yaml"));
-  const hasEvals = await pathExists(join(root, ".smarteval", "evals"));
-  console.log(`repo_root: ${root}`);
-  console.log(`config: ${hasConfig ? "present" : "missing"}`);
-  console.log(`evals: ${hasEvals ? "present" : "missing"}`);
+  const result = await runDoctor(root);
+  console.log(`repo_root: ${result.root}`);
+  for (const entry of result.checks) {
+    console.log(`${entry.status}: ${entry.message}`);
+  }
+  if (!result.ok) process.exitCode = 1;
 });
 
 program

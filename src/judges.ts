@@ -29,6 +29,42 @@ export interface JudgeProvider {
   score(input: JudgeInput): Promise<JudgeResult>;
 }
 
+type ModuleLoader = () => Promise<Record<string, unknown>>;
+
+const optionalImport = (specifier: string): Promise<Record<string, unknown>> =>
+  new Function("specifier", "return import(specifier);")(specifier) as Promise<Record<string, unknown>>;
+
+function buildJudgePrompt(input: JudgeInput): string {
+  return [
+    "You are evaluating one target output.",
+    "Return only JSON with this shape: {\"score\": number, \"passed\": boolean, \"rationale\": string, \"confidence\": number, \"metadata\": object}.",
+    `Rubric:\n${input.rubric}`,
+    `Example:\n${JSON.stringify(input.example)}`,
+    `Reference:\n${JSON.stringify(input.reference ?? null)}`,
+    `Target output:\n${input.output}`
+  ].join("\n\n");
+}
+
+function textFromSdkResult(result: unknown): string {
+  if (typeof result === "string") return result;
+  if (!result || typeof result !== "object") {
+    throw new Error("SDK judge returned an unsupported result shape.");
+  }
+  const record = result as Record<string, unknown>;
+  if (typeof record.result === "string") return record.result;
+  if (typeof record.content === "string") return record.content;
+  if (Array.isArray(record.content)) {
+    return record.content
+      .map((item) =>
+        item && typeof item === "object" && "text" in item
+          ? String((item as Record<string, unknown>).text ?? "")
+          : ""
+      )
+      .join("\n");
+  }
+  throw new Error("SDK judge returned no text result.");
+}
+
 export function parseJudgeOutput(raw: string): JudgeOutput {
   const candidates = [
     raw.trim(),
@@ -136,10 +172,29 @@ export class OpenRouterJudgeProvider implements JudgeProvider {
 export class CodexSdkJudgeProvider implements JudgeProvider {
   readonly name = "codex_sdk";
 
-  async score(): Promise<JudgeResult> {
-    throw new Error(
-      "Codex SDK judge provider is reserved behind the JudgeProvider interface. Install and wire the Codex SDK adapter before use."
-    );
+  constructor(
+    private readonly options: { model?: string } = {},
+    private readonly loadModule: ModuleLoader = () => optionalImport("@openai/codex-sdk")
+  ) {}
+
+  async score(input: JudgeInput): Promise<JudgeResult> {
+    let sdk: Record<string, unknown>;
+    try {
+      sdk = await this.loadModule();
+    } catch (error) {
+      throw new Error(`Codex SDK is not available. Install @openai/codex-sdk before using codex_sdk judges. ${(error as Error).message}`);
+    }
+    const Codex = sdk.Codex as (new (options: { model?: string }) => {
+      startThread(): Promise<{ run(prompt: string): Promise<unknown> }>;
+    }) | undefined;
+    if (typeof Codex !== "function") {
+      throw new Error("Codex SDK module did not export Codex.");
+    }
+
+    const agent = new Codex(this.options);
+    const thread = await agent.startThread();
+    const raw = textFromSdkResult(await thread.run(buildJudgePrompt(input)));
+    return { ...parseJudgeOutput(raw), provider: this.name };
   }
 }
 
@@ -148,10 +203,32 @@ export class ClaudeAgentSdkJudgeProvider implements JudgeProvider {
 
   readonly sdk_interface = "v2";
 
-  async score(): Promise<JudgeResult> {
-    throw new Error(
-      "Claude Agent SDK V2 judge provider is reserved behind the JudgeProvider interface. Install and wire the Claude Agent SDK adapter before use."
-    );
+  constructor(
+    private readonly options: { model?: string } = {},
+    private readonly loadModule: ModuleLoader = () => optionalImport("@anthropic-ai/claude-agent-sdk")
+  ) {}
+
+  async score(input: JudgeInput): Promise<JudgeResult> {
+    let sdk: Record<string, unknown>;
+    try {
+      sdk = await this.loadModule();
+    } catch (error) {
+      throw new Error(`Claude Agent SDK is not available. Install @anthropic-ai/claude-agent-sdk before using claude_agent_sdk judges. ${(error as Error).message}`);
+    }
+    const prompt = sdk.unstable_v2_prompt;
+    if (typeof prompt !== "function") {
+      throw new Error("Claude Agent SDK module did not export unstable_v2_prompt.");
+    }
+
+    const rawResult = await prompt(buildJudgePrompt(input), {
+      model: this.options.model ?? "claude-sonnet-4-5"
+    });
+    const result = rawResult as Record<string, unknown>;
+    if (result.subtype && result.subtype !== "success") {
+      throw new Error(`Claude Agent SDK judge failed with subtype ${String(result.subtype)}.`);
+    }
+    const raw = textFromSdkResult(rawResult);
+    return { ...parseJudgeOutput(raw), provider: this.name };
   }
 }
 

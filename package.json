@@ -19,8 +19,10 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "vitest run",
-    "ci": "npm run typecheck && npm run test"
+    "test": "npm run test:unit",
+    "test:unit": "vitest run --exclude tests/fixture-e2e.test.ts",
+    "test:e2e": "npm run build && vitest run tests/fixture-e2e.test.ts",
+    "ci": "npm run typecheck && npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
     "commander": "^14.0.3",

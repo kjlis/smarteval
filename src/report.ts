@@ -47,9 +47,31 @@ function signed(value: number): string {
   return `${value >= 0 ? "+" : ""}${pct(value)}`;
 }
 
+function isJudgeHeavyWin(input: ReportInput): boolean {
+  if (!input.comparison || input.comparison.overall_delta <= 0) return false;
+  const judges = input.manifest.judges ?? [];
+  if (judges.length === 0) return false;
+
+  let positiveContribution = 0;
+  let judgeContribution = 0;
+  const judgeMetrics = new Set(judges.map((judge) => judge.metric));
+  for (const [name, movement] of Object.entries(input.comparison.metrics)) {
+    if (movement.delta <= 0) continue;
+    const weight = input.candidate.metrics[name]?.weight ?? 0;
+    const contribution = movement.delta * weight;
+    positiveContribution += contribution;
+    if (judgeMetrics.has(name)) judgeContribution += contribution;
+  }
+
+  return positiveContribution > 0 && judgeContribution / positiveContribution >= 0.5;
+}
+
 export function generateMarkdownReport(input: ReportInput): string {
   const score = input.candidate;
   const comparison = input.comparison;
+  const derivedWarnings = isJudgeHeavyWin(input)
+    ? ["Winning candidate is supported mainly by judge metrics."]
+    : [];
   const lines: string[] = [];
 
   lines.push(`# Smarteval Report: ${input.manifest.eval_name}`);
@@ -83,6 +105,17 @@ export function generateMarkdownReport(input: ReportInput): string {
   lines.push(`- Error rate: ${pct(score.runtime.error_rate)}`);
   lines.push(`- Timeouts: ${score.runtime.timeout_count}`);
   lines.push("");
+  if ((input.manifest.judges ?? []).length > 0) {
+    lines.push("## Judge Metadata");
+    lines.push("| Metric | Provider | Model | Reproducibility |");
+    lines.push("| --- | --- | --- | --- |");
+    for (const judge of input.manifest.judges ?? []) {
+      lines.push(
+        `| ${judge.metric} | ${judge.provider} | ${judge.model ?? "n/a"} | ${judge.reproducibility} |`
+      );
+    }
+    lines.push("");
+  }
   lines.push("## Regressions");
   if (comparison && comparison.regressions.length > 0) {
     for (const regression of comparison.regressions) lines.push(`- ${regression}`);
@@ -90,11 +123,28 @@ export function generateMarkdownReport(input: ReportInput): string {
     lines.push("- None detected by configured metrics.");
   }
   lines.push("");
+  if (input.manifest.failures_summary && input.manifest.failures_summary.total_failed_examples > 0) {
+    lines.push("## Failure Clusters");
+    lines.push(`- Failed examples: ${input.manifest.failures_summary.total_failed_examples}`);
+    lines.push("");
+    lines.push("| Failed metric | Count | Top tags |");
+    lines.push("| --- | ---: | --- |");
+    for (const [metric, bucket] of Object.entries(input.manifest.failures_summary.by_metric)) {
+      const tags = Object.entries(bucket.tags)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag, count]) => `${tag} (${count})`)
+        .join(", ");
+      lines.push(`| ${metric} | ${bucket.count} | ${tags || "n/a"} |`);
+    }
+    lines.push("");
+  }
   lines.push("## Limitations");
-  const warnings = input.manifest.warnings.length
-    ? input.manifest.warnings
+  const warnings = [...input.manifest.warnings, ...derivedWarnings];
+  const uniqueWarnings = [...new Set(warnings)];
+  const visibleWarnings = uniqueWarnings.length
+    ? uniqueWarnings
     : ["No run warnings were recorded."];
-  for (const warning of warnings) lines.push(`- ${warning}`);
+  for (const warning of visibleWarnings) lines.push(`- ${warning}`);
   lines.push("");
   lines.push("## Recommended next action");
   if (comparison && comparison.regressions.length > 0) {

@@ -52,13 +52,13 @@ Working checklist for implementation. Keep this file practical and update it as 
 - [x] Define structured judge output contract.
 - [x] Implement OpenRouter judge provider first.
 - [x] Add structured-output parsing and repair/failure handling.
-- [ ] Store judge model/provider/rubric/raw response metadata.
-- [ ] Implement Codex SDK judge provider.
-- [ ] Implement Claude Agent SDK judge provider using V2 preview behind adapter.
+- [x] Store judge model/provider/rubric/raw response metadata.
+- [x] Implement Codex SDK judge provider.
+- [x] Implement Claude Agent SDK judge provider using V2 preview behind adapter.
 - [x] Add `command` judge provider.
-- [ ] Add local-agent reproducibility warnings in run metadata/report.
+- [x] Add local-agent reproducibility warnings in run metadata/report.
 
-Note: provider interfaces, OpenRouter, and command judging are implemented. Codex/Claude SDK adapters are reserved behind provider classes with actionable errors until SDK dependencies are added and wired into the runner.
+Note: provider interfaces, OpenRouter, command judging, Codex SDK, and Claude Agent SDK judging are implemented. Codex and Claude use optional dynamic adapters so Smarteval does not force those SDK packages as hard dependencies.
 
 ## Phase 5: Scoring and Comparison
 
@@ -67,7 +67,7 @@ Note: provider interfaces, OpenRouter, and command judging are implemented. Code
 - [x] Compare baseline vs candidate.
 - [x] Detect regressions by metric.
 - [x] Detect cost/latency regressions.
-- [ ] Add simple failure clustering by evaluator failure/tag.
+- [x] Add simple failure clustering by evaluator failure/tag.
 - [x] Add comparison tests.
 
 ## Phase 6: Reports
@@ -78,7 +78,7 @@ Note: provider interfaces, OpenRouter, and command judging are implemented. Code
 - [x] Include per-metric movement.
 - [x] Include regressions and limitations.
 - [x] Warn on weak datasets.
-- [ ] Warn on judge-heavy wins.
+- [x] Warn on judge-heavy wins.
 - [x] Include recommended next action.
 
 ## Phase 7: Planning and Candidate UX
@@ -101,13 +101,13 @@ Note: provider interfaces, OpenRouter, and command judging are implemented. Code
 
 ## Phase 9: Hardening
 
-- [ ] Add cost caps for judge providers.
-- [ ] Add concurrency controls.
-- [ ] Add credential checks and actionable errors.
+- [x] Add cost caps for judge providers.
+- [x] Add concurrency controls.
+- [x] Add credential checks and actionable errors.
 - [x] Add `smarteval doctor`.
 - [x] Add dirty-worktree / git commit metadata.
 - [x] Add CI smoke command.
-- [ ] Add fixture-based end-to-end test.
+- [x] Add fixture-based end-to-end test.
 
 ## Deferred
 

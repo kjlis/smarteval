@@ -82,4 +82,23 @@ describe("artifact schemas", () => {
 
     expect(parsed.expected_improvement).toEqual(["valid_json"]);
   });
+
+  test("accepts command judge rubric and judge metric metadata", () => {
+    const config = evalConfigSchema.parse({
+      name: "judge_eval",
+      objective: { description: "Judge an output." },
+      target: { type: "command", command: ["node", "target.js"] },
+      inputs: { dataset: "dataset.jsonl" },
+      scoring_vectors: {
+        quality: {
+          type: "command_judge",
+          command: ["node", "judge.js"],
+          rubric: "Pass if useful.",
+          weight: 1
+        }
+      }
+    });
+
+    expect(config.scoring_vectors.quality.type).toBe("command_judge");
+  });
 });
