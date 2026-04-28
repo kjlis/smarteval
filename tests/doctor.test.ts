@@ -95,4 +95,37 @@ describe("doctor", () => {
       })
     );
   });
+
+  test("checks configured Codex and Claude SDK package availability", async () => {
+    const root = await mkdtemp(join(tmpdir(), "smarteval-doctor-sdk-"));
+    await mkdir(join(root, ".smarteval"), { recursive: true });
+    await writeFile(
+      join(root, ".smarteval", "config.yaml"),
+      [
+        'schema_version: "1"',
+        "defaults:",
+        "  planner:",
+        "    provider: codex_sdk",
+        "    model: gpt-5.5",
+        "  judge:",
+        "    provider: claude_agent_sdk",
+        "    model: claude-sonnet-4-5"
+      ].join("\n") + "\n"
+    );
+
+    const result = await runDoctor(root, { env: { PATH: "" } });
+
+    expect(result.checks).toContainEqual(
+      expect.objectContaining({
+        status: "warning",
+        message: expect.stringContaining("@openai/codex-sdk")
+      })
+    );
+    expect(result.checks).toContainEqual(
+      expect.objectContaining({
+        status: "warning",
+        message: expect.stringContaining("@anthropic-ai/claude-agent-sdk")
+      })
+    );
+  });
 });

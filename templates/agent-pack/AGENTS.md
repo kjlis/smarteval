@@ -2,6 +2,12 @@
 
 Use Smarteval before changing prompts, model configs, retrieval settings, structured-output instructions, image prompts, or agent workflows unless explicitly told otherwise.
 
+Prefer subscription-backed providers for local evals:
+
+- Codex users: `smarteval config defaults --preset codex`
+- Claude Code users: `smarteval config defaults --preset claude`
+- Use `--preset api` only for API-backed CI/noninteractive runs.
+
 1. Identify the target behavior and likely target files.
 2. Run `smarteval doctor` if `.smarteval/` exists.
 3. Run or update `smarteval plan` before changing AI behavior.

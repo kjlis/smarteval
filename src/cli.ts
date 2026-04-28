@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { parse, stringify } from "yaml";
 import { findRepoRoot, pathExists, readEvalConfig, readSmartevalConfig, resolveEvalFile, writeYaml } from "./config.js";
@@ -13,7 +14,8 @@ import {
   runCommandPlanner,
   writePlanArtifacts
 } from "./planner.js";
-import { compareAggregates, generateMarkdownReport } from "./report.js";
+import { compareAggregates, compareHumanReview, generateMarkdownReport } from "./report.js";
+import { importHumanReviewCsv, runPairwiseImageCommandReview } from "./review.js";
 import { runEvaluation } from "./runner.js";
 import {
   aggregateScoreSchema,
@@ -25,6 +27,19 @@ import {
 } from "./schemas.js";
 
 const program = new Command();
+const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+async function readHumanReviewSummary(runDir: string): Promise<ReturnType<typeof compareHumanReview> | undefined> {
+  const reviewSummaryPath = join(runDir, "human-review", "summary.json");
+  if (!(await pathExists(reviewSummaryPath))) return undefined;
+  return compareHumanReview(JSON.parse(await readFile(reviewSummaryPath, "utf8")));
+}
+
+async function readPairwiseImageReviewSummary(runDir: string): Promise<unknown | undefined> {
+  const reviewSummaryPath = join(runDir, "pairwise-image-review", "summary.json");
+  if (!(await pathExists(reviewSummaryPath))) return undefined;
+  return JSON.parse(await readFile(reviewSummaryPath, "utf8"));
+}
 
 program
   .name("smarteval")
@@ -43,8 +58,8 @@ program.command("init").description("Create the repo-local Smarteval directory."
         model: "gpt-5.5"
       },
       judge: {
-        provider: "openrouter_api",
-        model: "openai/gpt-5.4-mini"
+        provider: "codex_sdk",
+        model: "gpt-5.5"
       },
       max_cost_usd: 0,
       concurrency: 1
@@ -52,6 +67,94 @@ program.command("init").description("Create the repo-local Smarteval directory."
   });
   console.log("Created .smarteval/config.yaml");
 });
+
+program
+  .command("config")
+  .description("Manage repo-local Smarteval defaults.")
+  .command("defaults")
+  .description("Set default planner, judge, budget, and concurrency values.")
+  .option("--preset <name>", "provider preset: codex, claude, api")
+  .option("--planner-provider <provider>", "planner provider: command, codex_sdk, claude_agent_sdk, openrouter_api")
+  .option("--planner-model <model>", "planner model")
+  .option("--planner-command <command...>", "default command planner")
+  .option("--judge-provider <provider>", "judge provider: command, codex_sdk, claude_agent_sdk, openrouter_api")
+  .option("--judge-model <model>", "judge model")
+  .option("--max-cost-usd <amount>", "default maximum estimated judge cost")
+  .option("--concurrency <count>", "default run concurrency")
+  .action(async (options: {
+    preset?: "codex" | "claude" | "api";
+    plannerProvider?: "command" | "codex_sdk" | "claude_agent_sdk" | "openrouter_api";
+    plannerModel?: string;
+    plannerCommand?: string[];
+    judgeProvider?: "command" | "codex_sdk" | "claude_agent_sdk" | "openrouter_api";
+    judgeModel?: string;
+    maxCostUsd?: string;
+    concurrency?: string;
+  }) => {
+    const root = await findRepoRoot();
+    const current = await readSmartevalConfig(root);
+    const preset =
+      options.preset === "codex"
+        ? {
+            plannerProvider: "codex_sdk" as const,
+            plannerModel: "gpt-5.5",
+            judgeProvider: "codex_sdk" as const,
+            judgeModel: "gpt-5.5"
+          }
+        : options.preset === "claude"
+          ? {
+              plannerProvider: "claude_agent_sdk" as const,
+              plannerModel: "claude-sonnet-4-5",
+              judgeProvider: "claude_agent_sdk" as const,
+              judgeModel: "claude-sonnet-4-5"
+            }
+          : options.preset === "api"
+            ? {
+                plannerProvider: "openrouter_api" as const,
+                plannerModel: "openai/gpt-5.4-mini",
+                judgeProvider: "openrouter_api" as const,
+                judgeModel: "openai/gpt-5.4-mini"
+              }
+            : {};
+    const plannerProvider = options.plannerProvider ?? preset.plannerProvider ?? current.defaults.planner?.provider;
+    const plannerModel = options.plannerModel ?? preset.plannerModel ?? current.defaults.planner?.model;
+    const judgeProvider = options.judgeProvider ?? preset.judgeProvider ?? current.defaults.judge?.provider;
+    const judgeModel = options.judgeModel ?? preset.judgeModel ?? current.defaults.judge?.model;
+    if ((options.plannerModel || options.plannerCommand) && !plannerProvider) {
+      throw new Error("--planner-provider is required when setting planner model or command without an existing planner default.");
+    }
+    if (options.judgeModel && !judgeProvider) {
+      throw new Error("--judge-provider is required when setting judge model without an existing judge default.");
+    }
+    const next = {
+      schema_version: current.schema_version,
+      created_by: current.created_by ?? "smarteval",
+      defaults: {
+        ...current.defaults,
+        planner:
+          options.preset || options.plannerProvider || options.plannerModel || options.plannerCommand
+            ? {
+                ...current.defaults.planner,
+                provider: plannerProvider,
+                model: plannerModel,
+                command: options.plannerCommand ?? current.defaults.planner?.command
+              }
+            : current.defaults.planner,
+        judge:
+          options.preset || options.judgeProvider || options.judgeModel
+            ? {
+                ...current.defaults.judge,
+                provider: judgeProvider,
+                model: judgeModel
+              }
+            : current.defaults.judge,
+        max_cost_usd: options.maxCostUsd === undefined ? current.defaults.max_cost_usd : Number.parseFloat(options.maxCostUsd),
+        concurrency: options.concurrency === undefined ? current.defaults.concurrency : Number.parseInt(options.concurrency, 10)
+      }
+    };
+    await writeYaml(join(root, ".smarteval", "config.yaml"), next);
+    console.log("Updated .smarteval/config.yaml");
+  });
 
 program
   .command("plan")
@@ -229,7 +332,9 @@ program
       config,
       candidateId,
       maxCostUsd: options.maxCostUsd === undefined ? smartevalConfig.defaults.max_cost_usd : Number.parseFloat(options.maxCostUsd),
-      concurrency: options.concurrency === undefined ? smartevalConfig.defaults.concurrency : Number.parseInt(options.concurrency, 10)
+      concurrency: options.concurrency === undefined ? smartevalConfig.defaults.concurrency : Number.parseInt(options.concurrency, 10),
+      defaultJudgeProvider: smartevalConfig.defaults.judge?.provider === "command" ? undefined : smartevalConfig.defaults.judge?.provider,
+      defaultJudgeModel: smartevalConfig.defaults.judge?.model
     });
     console.log(`Wrote ${run.runDir}`);
     console.log(`Overall score: ${(run.scores.overall_score * 100).toFixed(1)}%`);
@@ -248,7 +353,10 @@ program
     const runRoot = join(root, ".smarteval", "evals", config.name, "runs");
     const baseline = aggregateScoreSchema.parse(JSON.parse(await readFile(join(runRoot, options.baseline, "scores.json"), "utf8")));
     const candidate = aggregateScoreSchema.parse(JSON.parse(await readFile(join(runRoot, options.candidate, "scores.json"), "utf8")));
-    console.log(JSON.stringify(compareAggregates(baseline, candidate), null, 2));
+    const comparison = compareAggregates(baseline, candidate);
+    const humanReview = await readHumanReviewSummary(join(runRoot, options.candidate));
+    if (humanReview) comparison.human_review = humanReview;
+    console.log(JSON.stringify(comparison, null, 2));
   });
 
 program
@@ -262,17 +370,71 @@ program
     const config = await readEvalConfig(await resolveEvalFile(root, options.eval));
     const runRoot = join(root, ".smarteval", "evals", config.name, "runs");
     const candidateDir = join(runRoot, options.candidate);
-    const manifest = runManifestSchema.parse(JSON.parse(await readFile(join(candidateDir, "manifest.json"), "utf8")));
+    const rawManifest = JSON.parse(await readFile(join(candidateDir, "manifest.json"), "utf8"));
+    const reviewSummaryPath = join(candidateDir, "human-review", "summary.json");
+    if (await pathExists(reviewSummaryPath)) {
+      rawManifest.human_review = JSON.parse(await readFile(reviewSummaryPath, "utf8"));
+    }
+    const pairwiseSummary = await readPairwiseImageReviewSummary(candidateDir);
+    if (pairwiseSummary) rawManifest.pairwise_image_review = pairwiseSummary;
+    const manifest = runManifestSchema.parse(rawManifest);
     const candidate = aggregateScoreSchema.parse(JSON.parse(await readFile(join(candidateDir, "scores.json"), "utf8")));
     const baseline = options.baseline
       ? aggregateScoreSchema.parse(JSON.parse(await readFile(join(runRoot, options.baseline, "scores.json"), "utf8")))
       : undefined;
     const comparison = baseline ? compareAggregates(baseline, candidate) : undefined;
+    const humanReview = await readHumanReviewSummary(candidateDir);
+    if (comparison && humanReview) comparison.human_review = humanReview;
     const markdown = generateMarkdownReport({ manifest, baseline, candidate, comparison });
     const reportDir = join(root, ".smarteval", "evals", config.name, "reports");
     await mkdir(reportDir, { recursive: true });
     await writeFile(join(reportDir, "latest.md"), markdown);
     console.log(markdown);
+  });
+
+const reviewCommand = program
+  .command("review")
+  .description("Human review utilities.");
+
+reviewCommand
+  .command("import")
+  .description("Import human image review ratings.")
+  .option("--eval <name>", "eval name")
+  .requiredOption("--run <run_id>", "run id")
+  .requiredOption("--file <path>", "ratings CSV file")
+  .action(async (options: { eval?: string; run: string; file: string }) => {
+    const root = await findRepoRoot();
+    const config = await readEvalConfig(await resolveEvalFile(root, options.eval));
+    const runDir = join(root, ".smarteval", "evals", config.name, "runs", options.run);
+    const summary = await importHumanReviewCsv(options.file);
+    const reviewDir = join(runDir, "human-review");
+    await mkdir(reviewDir, { recursive: true });
+    await writeFile(join(reviewDir, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
+    console.log(`Imported ${summary.total_ratings} human review rating(s).`);
+  });
+
+reviewCommand
+  .command("pairwise-command")
+  .description("Run a local command judge over matched baseline/candidate image artifacts.")
+  .argument("<command...>", "command judge to run")
+  .option("--eval <name>", "eval name")
+  .requiredOption("--baseline <run_id>", "baseline run id")
+  .requiredOption("--candidate <run_id>", "candidate run id")
+  .requiredOption("--rubric <text>", "pairwise image comparison rubric")
+  .action(async (command: string[], options: { eval?: string; baseline: string; candidate: string; rubric: string }) => {
+    const root = await findRepoRoot();
+    const config = await readEvalConfig(await resolveEvalFile(root, options.eval));
+    const runRoot = join(root, ".smarteval", "evals", config.name, "runs");
+    const summary = await runPairwiseImageCommandReview({
+      baselineRunDir: join(runRoot, options.baseline),
+      candidateRunDir: join(runRoot, options.candidate),
+      command,
+      rubric: options.rubric
+    });
+    console.log(`Pairwise image comparisons: ${summary.total_comparisons}`);
+    console.log(`Candidate wins: ${summary.wins.candidate}`);
+    console.log(`Baseline wins: ${summary.wins.baseline}`);
+    console.log(`Ties: ${summary.wins.tie}`);
   });
 
 program
@@ -337,19 +499,17 @@ program
   .option("--target <dir>", "target repo directory", ".")
   .action(async (options: { target: string }) => {
     const target = options.target;
-    await mkdir(join(target, ".codex", "skills", "smarteval", "references"), { recursive: true });
-    await mkdir(join(target, ".claude", "skills", "smarteval", "references"), { recursive: true });
-    const skill = `---\nname: smarteval\ndescription: Use when evaluating or improving LLM prompts, RAG answers, structured outputs, image prompts, or agent workflows with a repo-local Smarteval eval loop.\n---\n\n# Smarteval workflow\n\n1. Run \`smarteval doctor\` if .smarteval exists.\n2. Run \`smarteval plan\` before changing AI behavior.\n3. Confirm target, allowed levers, scoring vectors, and budget.\n4. Run \`smarteval run --baseline\`.\n5. Propose and run only approved candidates.\n6. Use \`smarteval compare\` and \`smarteval report\` before applying changes.\n\nAlways report regressions, latency, cost, limitations, and dataset weakness.\n`;
-    await writeFile(join(target, ".codex", "skills", "smarteval", "SKILL.md"), skill);
-    await writeFile(join(target, ".claude", "skills", "smarteval", "SKILL.md"), skill);
-    await writeFile(
-      join(target, "AGENTS.md"),
-      "## Smarteval workflow\n\nUse Smarteval before changing prompts, model configs, retrieval settings, structured-output instructions, or agent workflows unless explicitly told otherwise. Establish a baseline, run approved candidates, compare metric-level movement, and report regressions before applying changes.\n"
-    );
-    await writeFile(
-      join(target, "CLAUDE.md"),
-      "## Smarteval\n\nUse the Smarteval skill or CLI for controlled evaluation of probabilistic AI behavior. Prefer `smarteval plan`, `smarteval run --baseline`, `smarteval propose`, `smarteval compare`, and `smarteval report`.\n"
-    );
+    const templateRoot = join(packageRoot, "templates", "agent-pack");
+    await mkdir(join(target, ".codex", "skills"), { recursive: true });
+    await mkdir(join(target, ".claude", "skills"), { recursive: true });
+    await mkdir(join(target, ".claude", "commands"), { recursive: true });
+    await cp(join(templateRoot, "codex-skill"), join(target, ".codex", "skills", "smarteval"), { recursive: true });
+    await cp(join(templateRoot, "claude-skill"), join(target, ".claude", "skills", "smarteval"), { recursive: true });
+    await cp(join(templateRoot, "references"), join(target, ".codex", "skills", "smarteval", "references"), { recursive: true });
+    await cp(join(templateRoot, "references"), join(target, ".claude", "skills", "smarteval", "references"), { recursive: true });
+    await cp(join(templateRoot, "claude-commands"), join(target, ".claude", "commands"), { recursive: true });
+    await cp(join(templateRoot, "AGENTS.md"), join(target, "AGENTS.md"));
+    await cp(join(templateRoot, "CLAUDE.md"), join(target, "CLAUDE.md"));
     console.log(`Installed agent pack templates into ${target}`);
   });
 

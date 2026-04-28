@@ -108,6 +108,47 @@ function scoreMetric(config: EvaluatorConfig, row: RunResultRow): MetricResult {
       return pass(row.status === "passed" ? 1 : 0, `Execution status was ${row.status}.`);
     case "timeout_count":
       return pass(row.status === "timeout" ? 0 : 1, `Execution status was ${row.status}.`);
+    case "image_exists":
+      return pass(row.image_artifact ? 1 : 0, row.image_artifact ? "Image artifact is present." : "Image artifact is missing.");
+    case "image_mime_type": {
+      const actual = row.image_artifact?.mime_type;
+      const ok = actual ? config.allowed.includes(actual) : false;
+      return pass(ok ? 1 : 0, `Image MIME type is ${actual ?? "missing"}.`);
+    }
+    case "image_dimensions": {
+      const width = row.image_artifact?.width;
+      const height = row.image_artifact?.height;
+      const ok =
+        width !== undefined &&
+        height !== undefined &&
+        (config.width === undefined || width === config.width) &&
+        (config.height === undefined || height === config.height) &&
+        (config.min_width === undefined || width >= config.min_width) &&
+        (config.min_height === undefined || height >= config.min_height) &&
+        (config.max_width === undefined || width <= config.max_width) &&
+        (config.max_height === undefined || height <= config.max_height) &&
+        (config.min_aspect_ratio === undefined || width / height >= config.min_aspect_ratio) &&
+        (config.max_aspect_ratio === undefined || width / height <= config.max_aspect_ratio);
+      return pass(ok ? 1 : 0, `Image dimensions are ${width ?? "?"}x${height ?? "?"}.`);
+    }
+    case "image_file_size": {
+      const size = row.image_artifact?.file_size_bytes;
+      const ok =
+        size !== undefined &&
+        (config.min_bytes === undefined || size >= config.min_bytes) &&
+        (config.max_bytes === undefined || size <= config.max_bytes);
+      return pass(ok ? 1 : 0, `Image file size is ${size ?? "missing"} bytes.`);
+    }
+    case "image_not_blank": {
+      const stats = row.image_artifact?.metadata.image_stats;
+      if (!stats || typeof stats !== "object" || !("appears_blank" in stats)) {
+        return pass(0, "Image blankness stats are missing.");
+      }
+      const appearsBlank = Boolean((stats as { appears_blank: unknown }).appears_blank);
+      return pass(appearsBlank ? 0 : 1, appearsBlank ? "Image appears blank." : "Image has non-blank pixel content.");
+    }
+    case "image_unique":
+      return pass(row.image_artifact?.sha256 ? 1 : 0, row.image_artifact?.sha256 ? "Image hash is present for uniqueness analysis." : "Image hash is missing.");
     case "llm_judge":
       return pass(0, "LLM judge providers are schema-supported but not executed by the deterministic runner yet.");
     case "command_judge":

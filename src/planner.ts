@@ -59,6 +59,7 @@ function extractTextResult(result: unknown): string {
   }
   const record = result as Record<string, unknown>;
   if (typeof record.result === "string") return record.result;
+  if (typeof record.finalResponse === "string") return record.finalResponse;
   if (typeof record.content === "string") return record.content;
   if (Array.isArray(record.content)) {
     return record.content
@@ -70,6 +71,34 @@ function extractTextResult(result: unknown): string {
       .join("\n");
   }
   throw new Error("Planner provider returned no text result.");
+}
+
+async function runClaudeQuery(sdk: Record<string, unknown>, promptText: string, model?: string): Promise<string> {
+  const query = sdk.query;
+  if (typeof query !== "function") {
+    throw new Error("Claude Agent SDK module did not export unstable_v2_prompt or query.");
+  }
+  const messages = query({
+    prompt: promptText,
+    options: {
+      model,
+      allowedTools: []
+    }
+  }) as AsyncIterable<unknown>;
+  let lastText = "";
+  for await (const message of messages) {
+    if (typeof message === "string") lastText = message;
+    if (!message || typeof message !== "object") continue;
+    const record = message as Record<string, unknown>;
+    if (record.subtype && record.subtype !== "success") {
+      throw new Error(`Claude Agent SDK planner failed with subtype ${String(record.subtype)}.`);
+    }
+    if (typeof record.result === "string") lastText = record.result;
+    else if (typeof record.text === "string") lastText = record.text;
+    else if (typeof record.content === "string") lastText = record.content;
+  }
+  if (!lastText) throw new Error("Claude Agent SDK query returned no text result.");
+  return lastText;
 }
 
 function parsePlannerOutput(raw: string): PlannerOutput {
@@ -237,19 +266,19 @@ export class ClaudeAgentSdkPlannerProvider implements PlannerProvider {
     } catch (error) {
       throw new Error(`Claude Agent SDK is not available. Install @anthropic-ai/claude-agent-sdk before using claude_agent_sdk planners. ${(error as Error).message}`);
     }
+    const promptText = buildPlannerPrompt(request);
     const prompt = sdk.unstable_v2_prompt;
-    if (typeof prompt !== "function") {
-      throw new Error("Claude Agent SDK module did not export unstable_v2_prompt.");
+    if (typeof prompt === "function") {
+      const result = await prompt(promptText, {
+        model: this.options.model ?? "claude-sonnet-4-5"
+      });
+      const record = result as Record<string, unknown>;
+      if (record.subtype && record.subtype !== "success") {
+        throw new Error(`Claude Agent SDK planner failed with subtype ${String(record.subtype)}.`);
+      }
+      return parsePlannerOutput(extractTextResult(result));
     }
-
-    const result = await prompt(buildPlannerPrompt(request), {
-      model: this.options.model ?? "claude-sonnet-4-5"
-    });
-    const record = result as Record<string, unknown>;
-    if (record.subtype && record.subtype !== "success") {
-      throw new Error(`Claude Agent SDK planner failed with subtype ${String(record.subtype)}.`);
-    }
-    return parsePlannerOutput(extractTextResult(result));
+    return parsePlannerOutput(await runClaudeQuery(sdk, promptText, this.options.model ?? "claude-sonnet-4-5"));
   }
 }
 

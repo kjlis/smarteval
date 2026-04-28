@@ -1,0 +1,35 @@
+schema_version: "1"
+name: image_demo
+objective:
+  description: Evaluate generated image artifacts with deterministic gates.
+target:
+  type: command
+  command:
+    - node
+    - target.js
+  output_mode: image_artifact
+inputs:
+  dataset: .smarteval/evals/image_demo/dataset.jsonl
+scoring_vectors:
+  exists:
+    type: image_exists
+    weight: 0.2
+  mime:
+    type: image_mime_type
+    allowed:
+      - image/png
+    weight: 0.2
+  dimensions:
+    type: image_dimensions
+    width: 2
+    height: 1
+    min_aspect_ratio: 1.9
+    max_aspect_ratio: 2.1
+    weight: 0.2
+  size:
+    type: image_file_size
+    max_bytes: 200
+    weight: 0.2
+  nonblank:
+    type: image_not_blank
+    weight: 0.2

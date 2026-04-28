@@ -7,6 +7,13 @@ description: Use when evaluating or improving LLM prompts, RAG answers, structur
 
 Use Smarteval before changing probabilistic AI behavior unless the user explicitly asks you to skip evaluation.
 
+Prefer subscription-backed Codex evals before API-backed judging:
+
+```bash
+smarteval config defaults --preset codex
+smarteval doctor
+```
+
 1. Run `smarteval doctor` if `.smarteval/` exists.
 2. Run `smarteval plan` or inspect the existing `.smarteval/evals/<name>/eval.yaml`.
 3. Confirm target, allowed levers, scoring vectors, and budget.

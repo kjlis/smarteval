@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { z } from "zod";
-import type { DatasetRow } from "./schemas.js";
+import type { DatasetRow, ImageArtifact } from "./schemas.js";
 
 export const judgeOutputSchema = z.object({
   score: z.number().min(0).max(1),
@@ -18,6 +19,8 @@ export interface JudgeInput {
   output: string;
   rubric: string;
   reference?: unknown;
+  image_artifact?: ImageArtifact & { absolute_path: string };
+  reference_image_artifact?: Partial<ImageArtifact> & { image_path: string; absolute_path: string };
 }
 
 export interface JudgeResult extends JudgeOutput {
@@ -30,19 +33,40 @@ export interface JudgeProvider {
 }
 
 type ModuleLoader = () => Promise<Record<string, unknown>>;
+type CodexInput = string | Array<{ type: "text"; text: string } | { type: "local_image"; path: string }>;
 
 const optionalImport = (specifier: string): Promise<Record<string, unknown>> =>
   new Function("specifier", "return import(specifier);")(specifier) as Promise<Record<string, unknown>>;
+
+function imagePathLines(input: JudgeInput): string[] {
+  return [
+    input.image_artifact ? `Generated image path: ${input.image_artifact.absolute_path}` : undefined,
+    input.reference_image_artifact ? `Reference image path: ${input.reference_image_artifact.absolute_path}` : undefined
+  ].filter(Boolean) as string[];
+}
 
 function buildJudgePrompt(input: JudgeInput): string {
   return [
     "You are evaluating one target output.",
     "Return only JSON with this shape: {\"score\": number, \"passed\": boolean, \"rationale\": string, \"confidence\": number, \"metadata\": object}.",
+    ...imagePathLines(input),
     `Rubric:\n${input.rubric}`,
     `Example:\n${JSON.stringify(input.example)}`,
     `Reference:\n${JSON.stringify(input.reference ?? null)}`,
     `Target output:\n${input.output}`
   ].join("\n\n");
+}
+
+function codexJudgeInput(input: JudgeInput): CodexInput {
+  const images = [
+    input.image_artifact?.absolute_path,
+    input.reference_image_artifact?.absolute_path
+  ].filter(Boolean) as string[];
+  if (images.length === 0) return buildJudgePrompt(input);
+  return [
+    { type: "text", text: buildJudgePrompt(input) },
+    ...images.map((path) => ({ type: "local_image" as const, path }))
+  ];
 }
 
 function textFromSdkResult(result: unknown): string {
@@ -52,6 +76,7 @@ function textFromSdkResult(result: unknown): string {
   }
   const record = result as Record<string, unknown>;
   if (typeof record.result === "string") return record.result;
+  if (typeof record.finalResponse === "string") return record.finalResponse;
   if (typeof record.content === "string") return record.content;
   if (Array.isArray(record.content)) {
     return record.content
@@ -63,6 +88,34 @@ function textFromSdkResult(result: unknown): string {
       .join("\n");
   }
   throw new Error("SDK judge returned no text result.");
+}
+
+async function runClaudeQuery(sdk: Record<string, unknown>, promptText: string, model?: string, allowedTools: string[] = []): Promise<string> {
+  const query = sdk.query;
+  if (typeof query !== "function") {
+    throw new Error("Claude Agent SDK module did not export unstable_v2_prompt or query.");
+  }
+  const messages = query({
+    prompt: promptText,
+    options: {
+      model,
+      allowedTools
+    }
+  }) as AsyncIterable<unknown>;
+  let lastText = "";
+  for await (const message of messages) {
+    if (typeof message === "string") lastText = message;
+    if (!message || typeof message !== "object") continue;
+    const record = message as Record<string, unknown>;
+    if (record.subtype && record.subtype !== "success") {
+      throw new Error(`Claude Agent SDK judge failed with subtype ${String(record.subtype)}.`);
+    }
+    if (typeof record.result === "string") lastText = record.result;
+    else if (typeof record.text === "string") lastText = record.text;
+    else if (typeof record.content === "string") lastText = record.content;
+  }
+  if (!lastText) throw new Error("Claude Agent SDK query returned no text result.");
+  return lastText;
 }
 
 export function parseJudgeOutput(raw: string): JudgeOutput {
@@ -132,6 +185,7 @@ export class OpenRouterJudgeProvider implements JudgeProvider {
   ) {}
 
   async score(input: JudgeInput): Promise<JudgeResult> {
+    const userContent = await openRouterUserContent(input);
     const response = await fetch(`${this.options.baseUrl ?? "https://openrouter.ai/api/v1"}/chat/completions`, {
       method: "POST",
       headers: {
@@ -148,7 +202,7 @@ export class OpenRouterJudgeProvider implements JudgeProvider {
           },
           {
             role: "user",
-            content: JSON.stringify(input)
+            content: userContent
           }
         ],
         response_format: { type: "json_object" },
@@ -169,6 +223,43 @@ export class OpenRouterJudgeProvider implements JudgeProvider {
   }
 }
 
+async function imageContentPart(artifact: { absolute_path: string; mime_type?: string } | undefined): Promise<unknown[]> {
+  if (!artifact) return [];
+  const bytes = await readFile(artifact.absolute_path);
+  const mimeType = artifact.mime_type ?? "image/png";
+  return [
+    {
+      type: "image_url",
+      image_url: {
+        url: `data:${mimeType};base64,${bytes.toString("base64")}`
+      }
+    }
+  ];
+}
+
+async function openRouterUserContent(input: JudgeInput): Promise<unknown> {
+  if (!input.image_artifact && !input.reference_image_artifact) return JSON.stringify(input);
+  return [
+    {
+      type: "text",
+      text: JSON.stringify({
+        example: input.example,
+        output: input.output,
+        rubric: input.rubric,
+        reference: input.reference,
+        image_artifact: input.image_artifact
+          ? { ...input.image_artifact, absolute_path: undefined }
+          : undefined,
+        reference_image_artifact: input.reference_image_artifact
+          ? { ...input.reference_image_artifact, absolute_path: undefined }
+          : undefined
+      })
+    },
+    ...(await imageContentPart(input.image_artifact)),
+    ...(await imageContentPart(input.reference_image_artifact))
+  ];
+}
+
 export class CodexSdkJudgeProvider implements JudgeProvider {
   readonly name = "codex_sdk";
 
@@ -185,7 +276,7 @@ export class CodexSdkJudgeProvider implements JudgeProvider {
       throw new Error(`Codex SDK is not available. Install @openai/codex-sdk before using codex_sdk judges. ${(error as Error).message}`);
     }
     const Codex = sdk.Codex as (new (options: { model?: string }) => {
-      startThread(): Promise<{ run(prompt: string): Promise<unknown> }>;
+      startThread(): Promise<{ run(prompt: CodexInput): Promise<unknown> }>;
     }) | undefined;
     if (typeof Codex !== "function") {
       throw new Error("Codex SDK module did not export Codex.");
@@ -193,7 +284,7 @@ export class CodexSdkJudgeProvider implements JudgeProvider {
 
     const agent = new Codex(this.options);
     const thread = await agent.startThread();
-    const raw = textFromSdkResult(await thread.run(buildJudgePrompt(input)));
+    const raw = textFromSdkResult(await thread.run(codexJudgeInput(input)));
     return { ...parseJudgeOutput(raw), provider: this.name };
   }
 }
@@ -215,19 +306,25 @@ export class ClaudeAgentSdkJudgeProvider implements JudgeProvider {
     } catch (error) {
       throw new Error(`Claude Agent SDK is not available. Install @anthropic-ai/claude-agent-sdk before using claude_agent_sdk judges. ${(error as Error).message}`);
     }
+    const promptText = buildJudgePrompt(input);
     const prompt = sdk.unstable_v2_prompt;
-    if (typeof prompt !== "function") {
-      throw new Error("Claude Agent SDK module did not export unstable_v2_prompt.");
+    if (typeof prompt === "function") {
+      const rawResult = await prompt(promptText, {
+        model: this.options.model ?? "claude-sonnet-4-5"
+      });
+      const result = rawResult as Record<string, unknown>;
+      if (result.subtype && result.subtype !== "success") {
+        throw new Error(`Claude Agent SDK judge failed with subtype ${String(result.subtype)}.`);
+      }
+      const raw = textFromSdkResult(rawResult);
+      return { ...parseJudgeOutput(raw), provider: this.name };
     }
-
-    const rawResult = await prompt(buildJudgePrompt(input), {
-      model: this.options.model ?? "claude-sonnet-4-5"
-    });
-    const result = rawResult as Record<string, unknown>;
-    if (result.subtype && result.subtype !== "success") {
-      throw new Error(`Claude Agent SDK judge failed with subtype ${String(result.subtype)}.`);
-    }
-    const raw = textFromSdkResult(rawResult);
+    const raw = await runClaudeQuery(
+      sdk,
+      promptText,
+      this.options.model ?? "claude-sonnet-4-5",
+      imagePathLines(input).length > 0 ? ["Read"] : []
+    );
     return { ...parseJudgeOutput(raw), provider: this.name };
   }
 }

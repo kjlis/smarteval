@@ -14,6 +14,7 @@ const jsonValue: z.ZodType<unknown> = z.lazy(() =>
 export const commandTargetSchema = z.object({
   type: z.literal("command"),
   command: z.array(z.string()).min(1),
+  output_mode: z.enum(["text", "json", "image_artifact"]).default("text"),
   timeout_ms: z.number().int().positive().optional()
 });
 
@@ -61,6 +62,32 @@ export const evaluatorConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("latency"), max_ms: z.number().int().positive().optional(), ...weighted }),
   z.object({ type: z.literal("error_rate"), ...weighted }),
   z.object({ type: z.literal("timeout_count"), ...weighted }),
+  z.object({ type: z.literal("image_exists"), ...weighted }),
+  z.object({
+    type: z.literal("image_mime_type"),
+    allowed: z.array(z.string()).min(1),
+    ...weighted
+  }),
+  z.object({
+    type: z.literal("image_dimensions"),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+    min_width: z.number().int().positive().optional(),
+    min_height: z.number().int().positive().optional(),
+    max_width: z.number().int().positive().optional(),
+    max_height: z.number().int().positive().optional(),
+    min_aspect_ratio: z.number().positive().optional(),
+    max_aspect_ratio: z.number().positive().optional(),
+    ...weighted
+  }),
+  z.object({
+    type: z.literal("image_file_size"),
+    min_bytes: z.number().int().nonnegative().optional(),
+    max_bytes: z.number().int().nonnegative().optional(),
+    ...weighted
+  }),
+  z.object({ type: z.literal("image_not_blank"), ...weighted }),
+  z.object({ type: z.literal("image_unique"), ...weighted }),
   z.object({
     type: z.literal("llm_judge"),
     provider: z.string().min(1).optional(),
@@ -133,6 +160,17 @@ export const metricResultSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+export const imageArtifactSchema = z.object({
+  example_id: z.string().optional(),
+  image_path: z.string().min(1),
+  mime_type: z.string().optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  file_size_bytes: z.number().int().nonnegative().optional(),
+  sha256: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({})
+});
+
 export const runResultRowSchema = z.object({
   example_id: z.string().min(1),
   input: jsonValue,
@@ -144,6 +182,7 @@ export const runResultRowSchema = z.object({
   status: z.enum(["passed", "failed", "timeout"]),
   latency_ms: z.number().nonnegative(),
   error: z.string().optional(),
+  image_artifact: imageArtifactSchema.optional(),
   metrics: z.record(z.string(), metricResultSchema)
 });
 
@@ -198,6 +237,37 @@ export const runManifestSchema = z.object({
     )
     .default([]),
   estimated_cost_usd: z.number().nonnegative().default(0),
+  image_artifacts: z.array(imageArtifactSchema.extend({ example_id: z.string() })).default([]),
+  human_review: z
+    .object({
+      total_ratings: z.number().int().nonnegative(),
+      wins: z.object({
+        baseline: z.number().int().nonnegative(),
+        candidate: z.number().int().nonnegative(),
+        tie: z.number().int().nonnegative()
+      }),
+      average_quality_score: z.number().nonnegative(),
+      average_content_score: z.number().nonnegative()
+    })
+    .optional(),
+  pairwise_image_review: z
+    .object({
+      total_comparisons: z.number().int().nonnegative(),
+      wins: z.object({
+        baseline: z.number().int().nonnegative(),
+        candidate: z.number().int().nonnegative(),
+        tie: z.number().int().nonnegative()
+      }),
+      results: z.array(
+        z.object({
+          example_id: z.string(),
+          winner: z.enum(["baseline", "candidate", "tie"]),
+          rationale: z.string(),
+          criteria: z.record(z.string(), z.unknown()).default({})
+        })
+      )
+    })
+    .optional(),
   failures_summary: z
     .object({
       total_failed_examples: z.number().int().nonnegative(),
@@ -237,7 +307,15 @@ export const reportInputSchema = z.object({
           delta: z.number()
         })
       ),
-      regressions: z.array(z.string())
+      regressions: z.array(z.string()),
+      human_review: z
+        .object({
+          candidate_win_rate: z.number().min(0).max(1),
+          baseline_win_rate: z.number().min(0).max(1),
+          tie_rate: z.number().min(0).max(1),
+          net_candidate_wins: z.number()
+        })
+        .optional()
     })
     .optional()
 });
@@ -249,6 +327,7 @@ export type DatasetRow = z.infer<typeof datasetRowSchema>;
 export type Candidate = z.infer<typeof candidateSchema>;
 export type EvaluatorConfig = z.infer<typeof evaluatorConfigSchema>;
 export type MetricResult = z.infer<typeof metricResultSchema>;
+export type ImageArtifact = z.infer<typeof imageArtifactSchema>;
 export type RunResultRow = z.infer<typeof runResultRowSchema>;
 export type AggregateScore = z.infer<typeof aggregateScoreSchema>;
 export type RunManifest = z.infer<typeof runManifestSchema>;

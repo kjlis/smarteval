@@ -3,13 +3,16 @@ import { execFileSync, spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import { evaluateExample, scoreAggregate } from "./evaluators.js";
+import { materializeImageArtifact } from "./image.js";
 import {
   ClaudeAgentSdkJudgeProvider,
   CodexSdkJudgeProvider,
   CommandJudgeProvider,
+  type JudgeInput,
   OpenRouterJudgeProvider,
   providerReproducibilityWarning
 } from "./judges.js";
+import { writeHumanReviewGallery } from "./review.js";
 import {
   type AggregateScore,
   type CommandTarget,
@@ -37,6 +40,8 @@ export interface RunEvaluationOptions {
   runId?: string;
   maxCostUsd?: number;
   concurrency?: number;
+  defaultJudgeProvider?: "codex_sdk" | "claude_agent_sdk" | "openrouter_api";
+  defaultJudgeModel?: string;
 }
 
 export interface RunEvaluationResult {
@@ -160,15 +165,35 @@ function gitMetadata(root: string): RunManifest["git"] {
 
 function warningsFor(config: EvalConfig, rows: DatasetRow[]): string[] {
   const warnings: string[] = [];
+  const metrics = Object.values(config.scoring_vectors);
+  const isImageEval =
+    (config.target.type === "command" && config.target.output_mode === "image_artifact") ||
+    metrics.some((metric) => metric.type.startsWith("image_"));
   if (rows.length < 5) warnings.push("Dataset has fewer than 5 examples.");
   if (rows.every((row) => !row.reference)) warnings.push("Dataset has no reference outputs.");
   if (
-    Object.values(config.scoring_vectors).length > 0 &&
-    Object.values(config.scoring_vectors).every((metric) => isJudgeMetric(metric.type))
+    metrics.length > 0 &&
+    metrics.every((metric) => isJudgeMetric(metric.type))
   ) {
     warnings.push("Scoring is judge-only; add deterministic checks where possible.");
   }
+  if (isImageEval && rows.every((row) => !hasReferenceImage(row.reference))) {
+    warnings.push("Image eval has no reference image artifacts.");
+  }
+  if (isImageEval && metrics.length > 0 && metrics.every((metric) => isJudgeMetric(metric.type))) {
+    warnings.push("Image scoring is judge-only; add deterministic image checks where possible.");
+  }
   return warnings;
+}
+
+function hasReferenceImage(reference: DatasetRow["reference"]): boolean {
+  return (
+    Boolean(reference) &&
+    typeof reference === "object" &&
+    !Array.isArray(reference) &&
+    (typeof (reference as Record<string, unknown>).image_path === "string" ||
+      typeof (reference as Record<string, unknown>).reference_image_path === "string")
+  );
 }
 
 export function estimateJudgeCost(config: EvalConfig, exampleCount: number): number {
@@ -182,7 +207,61 @@ function isJudgeMetric(type: string): boolean {
   return type === "llm_judge" || type === "command_judge";
 }
 
-function judgeMetadata(config: EvalConfig): NonNullable<RunManifest["judges"]> {
+function referenceImageArtifact(reference: DatasetRow["reference"], root: string): JudgeInput["reference_image_artifact"] {
+  if (!reference || typeof reference !== "object" || Array.isArray(reference)) return undefined;
+  const record = reference as Record<string, unknown>;
+  const imagePath = typeof record.image_path === "string"
+    ? record.image_path
+    : typeof record.reference_image_path === "string"
+      ? record.reference_image_path
+      : undefined;
+  if (!imagePath) return undefined;
+  return {
+    image_path: imagePath,
+    mime_type: typeof record.mime_type === "string" ? record.mime_type : undefined,
+    width: typeof record.width === "number" ? record.width : undefined,
+    height: typeof record.height === "number" ? record.height : undefined,
+    absolute_path: resolveFromRoot(root, imagePath)
+  };
+}
+
+function buildJudgeInput(
+  datasetRow: DatasetRow,
+  result: RunResultRow,
+  rubric: string,
+  root: string,
+  runDir: string
+): JudgeInput {
+  return {
+    example: datasetRow,
+    output: result.output,
+    rubric,
+    reference: datasetRow.reference,
+    image_artifact: result.image_artifact
+      ? {
+          ...result.image_artifact,
+          absolute_path: join(runDir, result.image_artifact.image_path)
+        }
+      : undefined,
+    reference_image_artifact: referenceImageArtifact(datasetRow.reference, root)
+  };
+}
+
+function resolvedJudgeProvider(
+  metric: Extract<EvalConfig["scoring_vectors"][string], { type: "llm_judge" }>,
+  options: Pick<RunEvaluationOptions, "defaultJudgeProvider">
+): string {
+  return metric.provider ?? options.defaultJudgeProvider ?? "codex_sdk";
+}
+
+function resolvedJudgeModel(
+  metric: Extract<EvalConfig["scoring_vectors"][string], { type: "llm_judge" }>,
+  options: Pick<RunEvaluationOptions, "defaultJudgeModel">
+): string | undefined {
+  return metric.model ?? options.defaultJudgeModel;
+}
+
+function judgeMetadata(config: EvalConfig, options: Pick<RunEvaluationOptions, "defaultJudgeProvider" | "defaultJudgeModel"> = {}): NonNullable<RunManifest["judges"]> {
   const judges: NonNullable<RunManifest["judges"]> = [];
   for (const [metric, metricConfig] of Object.entries(config.scoring_vectors)) {
     if (metricConfig.type === "command_judge") {
@@ -193,11 +272,11 @@ function judgeMetadata(config: EvalConfig): NonNullable<RunManifest["judges"]> {
         reproducibility: providerReproducibilityWarning("command")
       });
     } else if (metricConfig.type === "llm_judge") {
-      const provider = metricConfig.provider ?? "openrouter_api";
+      const provider = resolvedJudgeProvider(metricConfig, options);
       judges.push({
         metric,
         provider,
-        model: metricConfig.model,
+        model: resolvedJudgeModel(metricConfig, options),
         rubric: metricConfig.rubric,
         reproducibility: providerReproducibilityWarning(provider)
       });
@@ -206,11 +285,53 @@ function judgeMetadata(config: EvalConfig): NonNullable<RunManifest["judges"]> {
   return judges;
 }
 
+function applyRunLevelImageMetrics(config: EvalConfig, results: RunResultRow[]): RunResultRow[] {
+  const uniqueMetrics = Object.entries(config.scoring_vectors)
+    .filter(([, metric]) => metric.type === "image_unique")
+    .map(([name]) => name);
+  if (uniqueMetrics.length === 0) return results;
+
+  const hashCounts = new Map<string, number>();
+  for (const result of results) {
+    const hash = result.image_artifact?.sha256;
+    if (hash) hashCounts.set(hash, (hashCounts.get(hash) ?? 0) + 1);
+  }
+
+  return results.map((result) => {
+    const metrics = { ...result.metrics };
+    for (const name of uniqueMetrics) {
+      const hash = result.image_artifact?.sha256;
+      if (!hash) {
+        metrics[name] = {
+          score: 0,
+          passed: false,
+          rationale: "Image hash is missing, so uniqueness cannot be checked."
+        };
+      } else if ((hashCounts.get(hash) ?? 0) > 1) {
+        metrics[name] = {
+          score: 0,
+          passed: false,
+          rationale: `Duplicate image hash ${hash} appears ${hashCounts.get(hash)} times in this run.`
+        };
+      } else {
+        metrics[name] = {
+          score: 1,
+          passed: true,
+          rationale: "Image hash is unique within this run."
+        };
+      }
+    }
+    return { ...result, metrics };
+  });
+}
+
 async function applyJudgeMetrics(
   config: EvalConfig,
   datasetRow: DatasetRow,
   result: RunResultRow,
-  root: string
+  root: string,
+  runDir: string,
+  options: Pick<RunEvaluationOptions, "defaultJudgeProvider" | "defaultJudgeModel"> = {}
 ): Promise<RunResultRow> {
   const metrics = { ...result.metrics };
 
@@ -218,12 +339,7 @@ async function applyJudgeMetrics(
     if (metric.type === "command_judge") {
       try {
         const provider = new CommandJudgeProvider(metric.command, root);
-        const judged = await provider.score({
-          example: datasetRow,
-          output: result.output,
-          rubric: metric.rubric,
-          reference: datasetRow.reference
-        });
+        const judged = await provider.score(buildJudgeInput(datasetRow, result, metric.rubric, root, runDir));
         metrics[name] = {
           score: judged.score,
           passed: judged.passed,
@@ -244,7 +360,8 @@ async function applyJudgeMetrics(
     }
 
     if (metric.type === "llm_judge") {
-      const providerName = metric.provider ?? "openrouter_api";
+      const providerName = resolvedJudgeProvider(metric, options);
+      const model = resolvedJudgeModel(metric, options);
       try {
         if (providerName === "openrouter_api") {
           const apiKey = process.env.OPENROUTER_API_KEY;
@@ -253,54 +370,39 @@ async function applyJudgeMetrics(
           }
           const provider = new OpenRouterJudgeProvider({
             apiKey,
-            model: metric.model ?? "openai/gpt-4.1-mini"
+            model: model ?? "openai/gpt-4.1-mini"
           });
-          const judged = await provider.score({
-            example: datasetRow,
-            output: result.output,
-            rubric: metric.rubric,
-            reference: datasetRow.reference
-          });
+          const judged = await provider.score(buildJudgeInput(datasetRow, result, metric.rubric, root, runDir));
           metrics[name] = {
             score: judged.score,
             passed: judged.passed,
             rationale: judged.rationale,
             provider: judged.provider,
-            model: metric.model,
+            model,
             confidence: judged.confidence,
             raw_response: judged.raw_response,
             metadata: judged.metadata
           };
         } else if (providerName === "codex_sdk") {
-          const judged = await new CodexSdkJudgeProvider({ model: metric.model }).score({
-            example: datasetRow,
-            output: result.output,
-            rubric: metric.rubric,
-            reference: datasetRow.reference
-          });
+          const judged = await new CodexSdkJudgeProvider({ model }).score(buildJudgeInput(datasetRow, result, metric.rubric, root, runDir));
           metrics[name] = {
             score: judged.score,
             passed: judged.passed,
             rationale: judged.rationale,
             provider: judged.provider,
-            model: metric.model,
+            model,
             confidence: judged.confidence,
             raw_response: judged.raw_response,
             metadata: judged.metadata
           };
         } else if (providerName === "claude_agent_sdk") {
-          const judged = await new ClaudeAgentSdkJudgeProvider({ model: metric.model }).score({
-            example: datasetRow,
-            output: result.output,
-            rubric: metric.rubric,
-            reference: datasetRow.reference
-          });
+          const judged = await new ClaudeAgentSdkJudgeProvider({ model }).score(buildJudgeInput(datasetRow, result, metric.rubric, root, runDir));
           metrics[name] = {
             score: judged.score,
             passed: judged.passed,
             rationale: judged.rationale,
             provider: judged.provider,
-            model: metric.model,
+            model,
             confidence: judged.confidence,
             raw_response: judged.raw_response,
             metadata: judged.metadata
@@ -314,7 +416,7 @@ async function applyJudgeMetrics(
           passed: false,
           rationale: `LLM judge failed: ${(error as Error).message}`,
           provider: providerName,
-          model: metric.model
+          model
         };
       }
     }
@@ -424,8 +526,22 @@ export async function runEvaluation(options: RunEvaluationOptions): Promise<RunE
   );
   await mkdir(runDir, { recursive: true });
 
-  const results = await mapWithConcurrency(rows, options.concurrency ?? 1, async (row) => {
+  const initialResults = await mapWithConcurrency(rows, options.concurrency ?? 1, async (row) => {
     const targetResult = await runTarget(options.config.target, row, options.root);
+    let imageArtifact: RunResultRow["image_artifact"];
+    let error = targetResult.error;
+    if (options.config.target.type === "command" && options.config.target.output_mode === "image_artifact" && targetResult.status === "passed") {
+      try {
+        imageArtifact = await materializeImageArtifact({
+          root: options.root,
+          runDir,
+          exampleId: row.id,
+          raw: JSON.parse(targetResult.stdout.trim())
+        });
+      } catch (artifactError) {
+        error = `Image artifact failed: ${(artifactError as Error).message}`;
+      }
+    }
     const result: RunResultRow = {
       example_id: row.id,
       input: row.input,
@@ -434,22 +550,33 @@ export async function runEvaluation(options: RunEvaluationOptions): Promise<RunE
       output: targetResult.stdout.trim(),
       stdout: targetResult.stdout.trim(),
       stderr: targetResult.stderr.trim(),
-      status: targetResult.status,
+      status: error ? "failed" : targetResult.status,
       latency_ms: targetResult.latency_ms,
-      error: targetResult.error,
+      error,
+      image_artifact: imageArtifact,
       metrics: {}
     };
     return applyJudgeMetrics(
       options.config,
       row,
       evaluateExample(options.config, result),
-      options.root
+      options.root,
+      runDir,
+      options
     );
   });
+  const results = applyRunLevelImageMetrics(options.config, initialResults);
 
   const scores = scoreAggregate(options.config, results);
-  const judges = judgeMetadata(options.config);
+  const judges = judgeMetadata(options.config, options);
   const failuresSummary = summarizeFailures(results);
+  const imageArtifacts = results
+    .filter((result): result is RunResultRow & { image_artifact: NonNullable<RunResultRow["image_artifact"]> } => Boolean(result.image_artifact))
+    .map((result) => ({
+      ...result.image_artifact,
+      example_id: result.example_id
+    }));
+  await writeHumanReviewGallery(runDir, imageArtifacts);
   const manifest: RunManifest = {
     smarteval_version: "0.1.0",
     eval_schema_version: options.config.schema_version,
@@ -463,6 +590,7 @@ export async function runEvaluation(options: RunEvaluationOptions): Promise<RunE
     git: gitMetadata(options.root),
     judges,
     estimated_cost_usd: estimatedCostUsd,
+    image_artifacts: imageArtifacts,
     failures_summary: failuresSummary,
     warnings: warningsFor(options.config, rows)
   };

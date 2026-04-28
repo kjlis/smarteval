@@ -1,9 +1,18 @@
 import type { AggregateScore, ReportInput } from "./schemas.js";
+import type { HumanReviewSummary } from "./review.js";
 
 export interface Comparison {
   overall_delta: number;
   metrics: Record<string, { baseline: number; candidate: number; delta: number }>;
   regressions: string[];
+  human_review?: HumanReviewComparison;
+}
+
+export interface HumanReviewComparison {
+  candidate_win_rate: number;
+  baseline_win_rate: number;
+  tie_rate: number;
+  net_candidate_wins: number;
 }
 
 export function compareAggregates(baseline: AggregateScore, candidate: AggregateScore): Comparison {
@@ -39,6 +48,16 @@ export function compareAggregates(baseline: AggregateScore, candidate: Aggregate
   };
 }
 
+export function compareHumanReview(summary: HumanReviewSummary): HumanReviewComparison {
+  const total = summary.total_ratings || 1;
+  return {
+    candidate_win_rate: summary.wins.candidate / total,
+    baseline_win_rate: summary.wins.baseline / total,
+    tie_rate: summary.wins.tie / total,
+    net_candidate_wins: summary.wins.candidate - summary.wins.baseline
+  };
+}
+
 function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -66,12 +85,21 @@ function isJudgeHeavyWin(input: ReportInput): boolean {
   return positiveContribution > 0 && judgeContribution / positiveContribution >= 0.5;
 }
 
+function isImageReport(input: ReportInput): boolean {
+  return (
+    (input.manifest.target.type === "command" && input.manifest.target.output_mode === "image_artifact") ||
+    (input.manifest.image_artifacts ?? []).length > 0
+  );
+}
+
 export function generateMarkdownReport(input: ReportInput): string {
   const score = input.candidate;
   const comparison = input.comparison;
-  const derivedWarnings = isJudgeHeavyWin(input)
-    ? ["Winning candidate is supported mainly by judge metrics."]
-    : [];
+  const judgeHeavyWin = isJudgeHeavyWin(input);
+  const derivedWarnings = [
+    ...(judgeHeavyWin ? ["Winning candidate is supported mainly by judge metrics."] : []),
+    ...(judgeHeavyWin && isImageReport(input) ? ["Image candidate win is supported mainly by judge metrics."] : [])
+  ];
   const lines: string[] = [];
 
   lines.push(`# Smarteval Report: ${input.manifest.eval_name}`);
@@ -113,6 +141,48 @@ export function generateMarkdownReport(input: ReportInput): string {
       lines.push(
         `| ${judge.metric} | ${judge.provider} | ${judge.model ?? "n/a"} | ${judge.reproducibility} |`
       );
+    }
+    lines.push("");
+  }
+  if ((input.manifest.image_artifacts ?? []).length > 0) {
+    lines.push("## Image Artifacts");
+    for (const artifact of input.manifest.image_artifacts ?? []) {
+      lines.push(`### ${artifact.example_id}`);
+      lines.push(`![${artifact.example_id}](${artifact.image_path})`);
+      lines.push("");
+      lines.push(`- MIME: ${artifact.mime_type ?? "unknown"}`);
+      lines.push(`- Dimensions: ${artifact.width ?? "?"}x${artifact.height ?? "?"}`);
+      lines.push(`- Size: ${artifact.file_size_bytes ?? "unknown"} bytes`);
+      lines.push("");
+    }
+  }
+  if (input.manifest.human_review) {
+    lines.push("## Human Review");
+    lines.push(`- Total ratings: ${input.manifest.human_review.total_ratings}`);
+    lines.push(`- Baseline wins: ${input.manifest.human_review.wins.baseline}`);
+    lines.push(`- Candidate wins: ${input.manifest.human_review.wins.candidate}`);
+    lines.push(`- Ties: ${input.manifest.human_review.wins.tie}`);
+    lines.push(`- Average quality score: ${input.manifest.human_review.average_quality_score.toFixed(2)}`);
+    lines.push(`- Average content score: ${input.manifest.human_review.average_content_score.toFixed(2)}`);
+    if (comparison?.human_review) {
+      lines.push(`- Candidate win rate: ${pct(comparison.human_review.candidate_win_rate)}`);
+      lines.push(`- Baseline win rate: ${pct(comparison.human_review.baseline_win_rate)}`);
+      lines.push(`- Tie rate: ${pct(comparison.human_review.tie_rate)}`);
+      lines.push(`- Net candidate wins: ${comparison.human_review.net_candidate_wins >= 0 ? "+" : ""}${comparison.human_review.net_candidate_wins}`);
+    }
+    lines.push("");
+  }
+  if (input.manifest.pairwise_image_review) {
+    lines.push("## Pairwise Image Review");
+    lines.push(`- Total comparisons: ${input.manifest.pairwise_image_review.total_comparisons}`);
+    lines.push(`- Baseline wins: ${input.manifest.pairwise_image_review.wins.baseline}`);
+    lines.push(`- Candidate wins: ${input.manifest.pairwise_image_review.wins.candidate}`);
+    lines.push(`- Ties: ${input.manifest.pairwise_image_review.wins.tie}`);
+    lines.push("");
+    lines.push("| Example | Winner | Rationale |");
+    lines.push("| --- | --- | --- |");
+    for (const result of input.manifest.pairwise_image_review.results) {
+      lines.push(`| ${result.example_id} | ${result.winner} | ${result.rationale.replaceAll("|", "\\|")} |`);
     }
     lines.push("");
   }

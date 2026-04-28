@@ -236,6 +236,53 @@ describe("command runner", () => {
     ).rejects.toThrow("Estimated judge cost");
   });
 
+  test("uses configured default judge provider for llm_judge metrics without per-metric provider", async () => {
+    const root = await mkdtemp(join(tmpdir(), "smarteval-default-judge-run-"));
+    const evalDir = join(root, ".smarteval", "evals", "default_judge_demo");
+    await mkdir(evalDir, { recursive: true });
+    await writeFile(
+      join(evalDir, "dataset.jsonl"),
+      JSON.stringify({ id: "case_001", input: { text: "ok" }, tags: [] }) + "\n"
+    );
+
+    const config: EvalConfig = {
+      schema_version: "1",
+      name: "default_judge_demo",
+      objective: { description: "Default judge demo." },
+      target: {
+        type: "command",
+        command: [process.execPath, "-e", "process.stdin.resume(); process.stdin.on('end', () => console.log('ok'));"]
+      },
+      inputs: { dataset: ".smarteval/evals/default_judge_demo/dataset.jsonl" },
+      scoring_vectors: {
+        quality: {
+          type: "llm_judge",
+          rubric: "Pass if ok.",
+          weight: 1
+        }
+      }
+    };
+
+    const run = await runEvaluation({
+      root,
+      config,
+      candidateId: "baseline",
+      runId: "default-judge-run",
+      defaultJudgeProvider: "claude_agent_sdk",
+      defaultJudgeModel: "claude-sonnet-4-5"
+    });
+
+    expect(run.manifest.judges).toEqual([
+      expect.objectContaining({
+        metric: "quality",
+        provider: "claude_agent_sdk",
+        model: "claude-sonnet-4-5"
+      })
+    ]);
+    expect(run.results[0]?.metrics.quality.provider).toBe("claude_agent_sdk");
+    expect(run.results[0]?.metrics.quality.rationale).toContain("Claude Agent SDK is not available");
+  });
+
   test("runs examples with bounded concurrency", async () => {
     const root = await mkdtemp(join(tmpdir(), "smarteval-concurrency-"));
     const evalDir = join(root, ".smarteval", "evals", "concurrency_demo");
@@ -265,7 +312,17 @@ describe("command runner", () => {
       }
     };
 
-    const started = performance.now();
+    const sequentialStarted = performance.now();
+    await runEvaluation({
+      root,
+      config,
+      candidateId: "baseline",
+      runId: "sequential-run",
+      concurrency: 1
+    });
+    const sequentialElapsed = performance.now() - sequentialStarted;
+
+    const concurrentStarted = performance.now();
     const run = await runEvaluation({
       root,
       config,
@@ -273,13 +330,13 @@ describe("command runner", () => {
       runId: "concurrent-run",
       concurrency: 3
     });
-    const elapsed = performance.now() - started;
+    const concurrentElapsed = performance.now() - concurrentStarted;
 
     expect(run.results.map((result) => result.example_id)).toEqual([
       "case_1",
       "case_2",
       "case_3"
     ]);
-    expect(elapsed).toBeLessThan(320);
+    expect(concurrentElapsed).toBeLessThan(sequentialElapsed * 0.75);
   });
 });

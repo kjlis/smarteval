@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { compareAggregates, generateMarkdownReport } from "../src/report.js";
+import { compareAggregates, compareHumanReview, generateMarkdownReport } from "../src/report.js";
 import type { AggregateScore, RunManifest } from "../src/schemas.js";
 
 const manifest: RunManifest = {
@@ -115,5 +115,116 @@ describe("reports", () => {
     expect(markdown).toContain("## Judge Metadata");
     expect(markdown).toContain("command");
     expect(markdown).toContain("Record judge command");
+  });
+
+  test("warns when image candidate wins are judge-backed", () => {
+    const markdown = generateMarkdownReport({
+      manifest: {
+        ...manifest,
+        target: { type: "command", command: ["demo"], output_mode: "image_artifact" },
+        judges: [
+          {
+            metric: "visual_quality",
+            provider: "command",
+            rubric: "Pass if image quality is high.",
+            reproducibility: "Record judge command, rubric, raw response, and environment metadata."
+          }
+        ],
+        image_artifacts: [
+          {
+            example_id: "case_001",
+            image_path: "artifacts/images/case_001.png",
+            mime_type: "image/png"
+          }
+        ]
+      },
+      baseline: {
+        ...baseline,
+        overall_score: 0.2,
+        metrics: {
+          visual_quality: { score: 0.2, weight: 1, passed: 0, failed: 2 }
+        }
+      },
+      candidate: {
+        ...candidate,
+        overall_score: 0.8,
+        metrics: {
+          visual_quality: { score: 0.8, weight: 1, passed: 2, failed: 0 }
+        }
+      },
+      comparison: {
+        overall_delta: 0.6,
+        metrics: {
+          visual_quality: { baseline: 0.2, candidate: 0.8, delta: 0.6 }
+        },
+        regressions: []
+      }
+    });
+
+    expect(markdown).toContain("Image candidate win is supported mainly by judge metrics.");
+  });
+
+  test("adds human review win rate to comparison and report", () => {
+    const comparison = {
+      ...compareAggregates(baseline, candidate),
+      human_review: compareHumanReview({
+        total_ratings: 4,
+        wins: { baseline: 1, candidate: 2, tie: 1 },
+        average_quality_score: 4,
+        average_content_score: 3.5,
+        ratings: []
+      })
+    };
+
+    const markdown = generateMarkdownReport({
+      manifest: {
+        ...manifest,
+        human_review: {
+          total_ratings: 4,
+          wins: { baseline: 1, candidate: 2, tie: 1 },
+          average_quality_score: 4,
+          average_content_score: 3.5
+        }
+      },
+      baseline,
+      candidate,
+      comparison
+    });
+
+    expect(comparison.human_review.candidate_win_rate).toBeCloseTo(0.5);
+    expect(comparison.human_review.net_candidate_wins).toBe(1);
+    expect(markdown).toContain("Candidate win rate: 50.0%");
+    expect(markdown).toContain("Net candidate wins: +1");
+  });
+
+  test("renders pairwise image review summaries", () => {
+    const markdown = generateMarkdownReport({
+      manifest: {
+        ...manifest,
+        pairwise_image_review: {
+          total_comparisons: 2,
+          wins: { baseline: 0, candidate: 1, tie: 1 },
+          results: [
+            {
+              example_id: "case_001",
+              winner: "candidate",
+              rationale: "Candidate has better composition.",
+              criteria: { composition: "candidate" }
+            },
+            {
+              example_id: "case_002",
+              winner: "tie",
+              rationale: "Both are acceptable.",
+              criteria: { prompt_adherence: "tie" }
+            }
+          ]
+        }
+      } as any,
+      candidate
+    });
+
+    expect(markdown).toContain("Pairwise Image Review");
+    expect(markdown).toContain("Candidate wins: 1");
+    expect(markdown).toContain("| case_001 | candidate | Candidate has better composition. |");
   });
 });

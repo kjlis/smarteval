@@ -1,7 +1,8 @@
+import { createRequire } from "node:module";
 import { access, readFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { parse } from "yaml";
-import { discoverEvalFiles, pathExists } from "./config.js";
+import { discoverEvalFiles, pathExists, readSmartevalConfig } from "./config.js";
 import { datasetRowSchema, evalConfigSchema, parseJsonl, type EvalConfig } from "./schemas.js";
 
 export type DoctorStatus = "ok" | "warning" | "error";
@@ -45,14 +46,47 @@ function usesOpenRouter(config: EvalConfig): boolean {
   );
 }
 
+function providerPackage(provider: string): string | undefined {
+  if (provider === "codex_sdk") return "@openai/codex-sdk";
+  if (provider === "claude_agent_sdk") return "@anthropic-ai/claude-agent-sdk";
+  return undefined;
+}
+
+function packageAvailable(root: string, packageName: string): boolean {
+  try {
+    createRequire(join(root, "package.json")).resolve(packageName);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sdkJudgeProviders(config: EvalConfig): string[] {
+  return Object.values(config.scoring_vectors)
+    .filter((metric) => metric.type === "llm_judge")
+    .map((metric) => metric.provider ?? "openrouter_api")
+    .filter((provider) => provider === "codex_sdk" || provider === "claude_agent_sdk");
+}
+
 export async function runDoctor(root: string, options: DoctorOptions = {}): Promise<DoctorResult> {
   const env = options.env ?? process.env;
   const checks: DoctorCheck[] = [];
   const hasConfig = await pathExists(join(root, ".smarteval", "config.yaml"));
+  const smartevalConfig = await readSmartevalConfig(root);
   const evalFiles = await discoverEvalFiles(root);
 
   checks.push(check(hasConfig ? "ok" : "warning", hasConfig ? "Config file is present." : "Config file is missing; run `smarteval init`."));
   checks.push(check(evalFiles.length > 0 ? "ok" : "warning", evalFiles.length > 0 ? `Found ${evalFiles.length} eval(s).` : "No evals found."));
+
+  for (const [label, provider] of [
+    ["default planner", smartevalConfig.defaults.planner?.provider],
+    ["default judge", smartevalConfig.defaults.judge?.provider]
+  ] as const) {
+    const packageName = provider ? providerPackage(provider) : undefined;
+    if (packageName && !packageAvailable(root, packageName)) {
+      checks.push(check("warning", `${packageName} is not installed; ${label} provider ${provider} will fail until it is added.`));
+    }
+  }
 
   for (const evalFile of evalFiles) {
     let config: EvalConfig;
@@ -103,6 +137,12 @@ export async function runDoctor(root: string, options: DoctorOptions = {}): Prom
 
     if (usesOpenRouter(config) && !env.OPENROUTER_API_KEY) {
       checks.push(check("error", `OPENROUTER_API_KEY is required for OpenRouter judge metrics in ${config.name}.`));
+    }
+    for (const provider of sdkJudgeProviders(config)) {
+      const packageName = providerPackage(provider);
+      if (packageName && !packageAvailable(root, packageName)) {
+        checks.push(check("error", `${packageName} is required for ${provider} judge metrics in ${config.name}.`));
+      }
     }
   }
 

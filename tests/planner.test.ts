@@ -96,6 +96,32 @@ describe("planner providers", () => {
     expect(output.questions).toContain("Review generated plan before running.");
   });
 
+  test("plans with Codex SDK finalResponse output", async () => {
+    const provider = new CodexSdkPlannerProvider(
+      { model: "gpt-5.5" },
+      async () => ({
+        Codex: class {
+          startThread() {
+            return {
+              async run() {
+                return {
+                  finalResponse: JSON.stringify(samplePlannerOutput("codex_final_response_demo"))
+                };
+              }
+            };
+          }
+        }
+      })
+    );
+
+    const output = await provider.plan({
+      root: "/tmp/repo",
+      name: "codex_final_response_demo"
+    });
+
+    expect(output.eval.name).toBe("codex_final_response_demo");
+  });
+
   test("plans with Claude Agent SDK V2 through an optional dynamic adapter", async () => {
     const provider = new ClaudeAgentSdkPlannerProvider(
       { model: "claude-sonnet-4-5" },
@@ -114,6 +140,28 @@ describe("planner providers", () => {
     });
 
     expect(output.eval.name).toBe("claude_demo");
+  });
+
+  test("plans with Claude Agent SDK query fallback", async () => {
+    const provider = new ClaudeAgentSdkPlannerProvider(
+      { model: "claude-sonnet-4-5" },
+      async () => ({
+        query: async function* () {
+          yield {
+            type: "result",
+            subtype: "success",
+            result: JSON.stringify(samplePlannerOutput("claude_query_demo"))
+          };
+        }
+      })
+    );
+
+    const output = await provider.plan({
+      root: "/tmp/repo",
+      name: "claude_query_demo"
+    });
+
+    expect(output.eval.name).toBe("claude_query_demo");
   });
 
   test("plans with OpenRouter using structured output", async () => {
