@@ -1,7 +1,34 @@
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
+import { z } from "zod";
 import { candidateSchema, evalConfigSchema, type Candidate, type EvalConfig } from "./schemas.js";
+
+export const smartevalConfigSchema = z.object({
+  schema_version: z.string().default("1"),
+  created_by: z.string().optional(),
+  defaults: z
+    .object({
+      planner: z
+        .object({
+          provider: z.enum(["command", "codex_sdk", "claude_agent_sdk", "openrouter_api"]),
+          model: z.string().optional(),
+          command: z.array(z.string()).min(1).optional()
+        })
+        .optional(),
+      judge: z
+        .object({
+          provider: z.enum(["command", "codex_sdk", "claude_agent_sdk", "openrouter_api"]),
+          model: z.string().optional()
+        })
+        .optional(),
+      max_cost_usd: z.number().nonnegative().optional(),
+      concurrency: z.number().int().positive().optional()
+    })
+    .default({})
+});
+
+export type SmartevalConfig = z.infer<typeof smartevalConfigSchema>;
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
@@ -31,6 +58,12 @@ export async function findRepoRoot(start = process.cwd()): Promise<string> {
 export async function readEvalConfig(path: string): Promise<EvalConfig> {
   const raw = parse(await readFile(path, "utf8"));
   return evalConfigSchema.parse(raw);
+}
+
+export async function readSmartevalConfig(root: string): Promise<SmartevalConfig> {
+  const path = join(root, ".smarteval", "config.yaml");
+  if (!(await pathExists(path))) return smartevalConfigSchema.parse({});
+  return smartevalConfigSchema.parse(parse(await readFile(path, "utf8")));
 }
 
 export async function writeYaml(path: string, value: unknown): Promise<void> {

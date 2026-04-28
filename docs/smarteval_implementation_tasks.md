@@ -85,6 +85,12 @@ Note: provider interfaces, OpenRouter, command judging, Codex SDK, and Claude Ag
 
 - [x] Implement `smarteval init`.
 - [x] Implement `smarteval plan`.
+- [x] Make `smarteval plan` assisted-first with explicit `--manual` fallback.
+- [x] Add command planner provider contract for assisted planning.
+- [x] Add Codex SDK planner provider.
+- [x] Add Claude Agent SDK planner provider using V2 preview behind adapter.
+- [x] Add OpenRouter API planner provider.
+- [x] Add `.smarteval/config.yaml` defaults for planner, judge, cost, and concurrency.
 - [x] Implement `smarteval dataset add`.
 - [x] Implement `smarteval propose`.
 - [x] Implement `smarteval apply <candidate> --dry-run`.

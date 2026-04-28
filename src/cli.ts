@@ -3,8 +3,16 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { parse, stringify } from "yaml";
-import { findRepoRoot, pathExists, readEvalConfig, resolveEvalFile, writeYaml } from "./config.js";
+import { findRepoRoot, pathExists, readEvalConfig, readSmartevalConfig, resolveEvalFile, writeYaml } from "./config.js";
 import { runDoctor } from "./doctor.js";
+import {
+  ClaudeAgentSdkPlannerProvider,
+  CodexSdkPlannerProvider,
+  manualPlannerOutput,
+  OpenRouterPlannerProvider,
+  runCommandPlanner,
+  writePlanArtifacts
+} from "./planner.js";
 import { compareAggregates, generateMarkdownReport } from "./report.js";
 import { runEvaluation } from "./runner.js";
 import {
@@ -29,7 +37,18 @@ program.command("init").description("Create the repo-local Smarteval directory."
   await writeYaml(join(root, ".smarteval", "config.yaml"), {
     schema_version: "1",
     created_by: "smarteval",
-    default_max_cost_usd: 0
+    defaults: {
+      planner: {
+        provider: "codex_sdk",
+        model: "gpt-5.5"
+      },
+      judge: {
+        provider: "openrouter_api",
+        model: "openai/gpt-5.4-mini"
+      },
+      max_cost_usd: 0,
+      concurrency: 1
+    }
   });
   console.log("Created .smarteval/config.yaml");
 });
@@ -39,57 +58,112 @@ program
   .description("Create a human-editable eval plan and starter dataset.")
   .option("--name <name>", "eval name", "example_eval")
   .option("--target <command...>", "command target to run for each dataset row")
-  .action(async (options: { name: string; target?: string[] }) => {
+  .option("--manual", "create deterministic manual scaffold without an assisted planner", false)
+  .option("--planner-provider <provider>", "planner provider: command, codex_sdk, claude_agent_sdk, openrouter_api")
+  .option("--planner-command <command...>", "command planner to run when --planner-provider command is used")
+  .option("--planner-model <model>", "model to use for sdk/api planner providers")
+  .action(async (options: { name: string; target?: string[]; manual?: boolean; plannerProvider?: string; plannerCommand?: string[]; plannerModel?: string }) => {
     const root = await findRepoRoot();
-    const evalDir = join(root, ".smarteval", "evals", options.name);
-    await mkdir(join(evalDir, "candidates"), { recursive: true });
-    const command = options.target?.length ? options.target : ["node", "scripts/eval-target.js"];
-    await writeYaml(join(evalDir, "eval.yaml"), {
-      schema_version: "1",
-      name: options.name,
-      objective: {
-        description: "Describe the AI behavior this eval should improve."
-      },
-      target: {
-        type: "command",
-        command,
-        timeout_ms: 30000
-      },
-      inputs: {
-        dataset: `.smarteval/evals/${options.name}/dataset.jsonl`
-      },
-      allowed_levers: ["prompt"],
-      fixed_constraints: [],
-      scoring_vectors: {
-        valid_json: { type: "json_validity", weight: 0.5 },
-        error_rate: { type: "error_rate", weight: 0.5 }
-      },
-      experiment_budget: {
-        iterations: 1,
-        candidates_per_iteration: 1,
-        max_cost_usd: 0
+    const smartevalConfig = await readSmartevalConfig(root);
+    const provider = options.plannerProvider ?? smartevalConfig.defaults.planner?.provider;
+    const plannerModel = options.plannerModel ?? smartevalConfig.defaults.planner?.model;
+    const plannerCommand = options.plannerCommand ?? smartevalConfig.defaults.planner?.command;
+
+    if (!options.manual && !provider) {
+      throw new Error(
+        [
+          "No planner provider configured.",
+          "",
+          "Choose one:",
+          "- smarteval plan --planner-provider command --planner-command <cmd...>",
+          "- smarteval plan --planner-provider codex_sdk",
+          "- smarteval plan --planner-provider claude_agent_sdk",
+          "- smarteval plan --planner-provider openrouter_api",
+          "- smarteval plan --manual"
+        ].join("\n")
+      );
+    }
+
+    if (options.manual) {
+      await writePlanArtifacts(root, manualPlannerOutput(options.name, options.target));
+      console.log(`Created .smarteval/evals/${options.name}/`);
+      return;
+    }
+
+    if (provider === "command") {
+      if (!plannerCommand?.length) {
+        throw new Error("--planner-command is required when --planner-provider command is used.");
       }
-    });
-    await writeFile(
-      join(evalDir, "dataset.jsonl"),
-      JSON.stringify({
-        id: "case_001",
-        input: { prompt: "Replace this with a real example." },
-        reference: {},
-        tags: ["smoke"],
-        notes: "Starter example; replace before trusting results."
-      }) + "\n"
+      const output = await runCommandPlanner({
+        root,
+        name: options.name,
+        providerCommand: plannerCommand,
+        targetCommand: options.target
+      });
+      await writePlanArtifacts(root, output);
+      console.log(`Created .smarteval/evals/${output.eval.name}/`);
+      for (const question of output.questions) {
+        console.log(`Question: ${question}`);
+      }
+      return;
+    }
+
+    if (provider === "codex_sdk") {
+      const output = await new CodexSdkPlannerProvider({
+        model: plannerModel
+      }).plan({
+        root,
+        name: options.name,
+        targetCommand: options.target
+      });
+      await writePlanArtifacts(root, output);
+      console.log(`Created .smarteval/evals/${output.eval.name}/`);
+      for (const question of output.questions) {
+        console.log(`Question: ${question}`);
+      }
+      return;
+    }
+
+    if (provider === "claude_agent_sdk") {
+      const output = await new ClaudeAgentSdkPlannerProvider({
+        model: plannerModel
+      }).plan({
+        root,
+        name: options.name,
+        targetCommand: options.target
+      });
+      await writePlanArtifacts(root, output);
+      console.log(`Created .smarteval/evals/${output.eval.name}/`);
+      for (const question of output.questions) {
+        console.log(`Question: ${question}`);
+      }
+      return;
+    }
+
+    if (provider === "openrouter_api") {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        throw new Error("OPENROUTER_API_KEY is required when --planner-provider openrouter_api is used.");
+      }
+      const output = await new OpenRouterPlannerProvider({
+        apiKey,
+        model: plannerModel ?? "openai/gpt-5.4-mini"
+      }).plan({
+        root,
+        name: options.name,
+        targetCommand: options.target
+      });
+      await writePlanArtifacts(root, output);
+      console.log(`Created .smarteval/evals/${output.eval.name}/`);
+      for (const question of output.questions) {
+        console.log(`Question: ${question}`);
+      }
+      return;
+    }
+
+    throw new Error(
+      `Unsupported planner provider: ${provider}. Use command, codex_sdk, claude_agent_sdk, openrouter_api, or --manual.`
     );
-    await writeYaml(join(evalDir, "candidates", "baseline.yaml"), {
-      id: "baseline",
-      name: "Current behavior",
-      strategy: "baseline",
-      hypothesis: "Current system behavior before changes.",
-      changes: ["No changes."],
-      expected_improvement: [],
-      risk: []
-    });
-    console.log(`Created .smarteval/evals/${options.name}/`);
   });
 
 program
@@ -144,17 +218,18 @@ program
   .option("--baseline", "run baseline")
   .option("--candidate <id>", "candidate id")
   .option("--max-cost-usd <amount>", "maximum estimated judge cost in USD")
-  .option("--concurrency <count>", "number of examples to run at once", "1")
+  .option("--concurrency <count>", "number of examples to run at once")
   .action(async (options: { eval?: string; baseline?: boolean; candidate?: string; maxCostUsd?: string; concurrency: string }) => {
     const root = await findRepoRoot();
+    const smartevalConfig = await readSmartevalConfig(root);
     const config = await readEvalConfig(await resolveEvalFile(root, options.eval));
     const candidateId = options.candidate ?? (options.baseline ? "baseline" : "current");
     const run = await runEvaluation({
       root,
       config,
       candidateId,
-      maxCostUsd: options.maxCostUsd === undefined ? undefined : Number.parseFloat(options.maxCostUsd),
-      concurrency: Number.parseInt(options.concurrency, 10)
+      maxCostUsd: options.maxCostUsd === undefined ? smartevalConfig.defaults.max_cost_usd : Number.parseFloat(options.maxCostUsd),
+      concurrency: options.concurrency === undefined ? smartevalConfig.defaults.concurrency : Number.parseInt(options.concurrency, 10)
     });
     console.log(`Wrote ${run.runDir}`);
     console.log(`Overall score: ${(run.scores.overall_score * 100).toFixed(1)}%`);
