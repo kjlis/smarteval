@@ -189,6 +189,20 @@ Note: provider interfaces, OpenRouter, command judging, Codex SDK, and Claude Ag
 - [x] Add report section for human-reviewed image decisions.
 - [x] Add tests for rating import validation and score aggregation.
 
+## Phase 17: Agent-Led Eval Orchestration
+
+- [x] Document the intended agent-first workflow: repo exploration, harness creation, plan approval, baseline, candidate iterations, comparison, and winner recommendation.
+- [x] Extend `smarteval plan` with `--goal` and `--iterations` so assisted planners receive the behavior goal and optimization budget.
+- [x] Strengthen planner prompts to ask for allowed levers, fixed constraints, harness needs, baseline/candidate iteration flow, and human confirmation questions.
+- [x] Add `smarteval agent-task` to write durable Codex/Claude runbooks under `.smarteval/agent-tasks/`.
+- [x] Update Codex and Claude agent-pack skills to treat harness creation and iteration as agent-owned work.
+- [x] Add a Claude Code slash-command template for agent-led Smarteval iteration.
+- [ ] Add a structured iteration manifest that records baseline run ID, candidate run IDs, selected winner, and rejected candidates.
+- [ ] Add `smarteval iterate --dry-run` to validate that an eval has a baseline, candidates, and required runbook fields before an agent starts modifying levers.
+- [ ] Add optional command hooks for pre-run setup and post-run cleanup in generated harnesses.
+- [ ] Add stronger safeguards for agent iteration, including dirty-worktree checks and a way to separate harness changes from behavior-lever changes.
+- [ ] Add an end-to-end fixture where an agent-style harness is generated, baseline is run, two deterministic candidates are compared, and a winner report is produced.
+
 ## Deferred
 
 - [ ] MCP server.

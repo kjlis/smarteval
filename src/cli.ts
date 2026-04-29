@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { parse, stringify } from "yaml";
+import { buildAgentTask, writeAgentTask } from "./agentTask.js";
 import { findRepoRoot, pathExists, readEvalConfig, readSmartevalConfig, resolveEvalFile, writeYaml } from "./config.js";
 import { runDoctor } from "./doctor.js";
 import {
@@ -160,17 +161,23 @@ program
   .command("plan")
   .description("Create a human-editable eval plan and starter dataset.")
   .option("--name <name>", "eval name", "example_eval")
+  .option("--goal <text>", "plain-language behavior goal for the eval")
+  .option("--iterations <count>", "candidate iterations the agent should plan for")
   .option("--target <command...>", "command target to run for each dataset row")
   .option("--manual", "create deterministic manual scaffold without an assisted planner", false)
   .option("--planner-provider <provider>", "planner provider: command, codex_sdk, claude_agent_sdk, openrouter_api")
   .option("--planner-command <command...>", "command planner to run when --planner-provider command is used")
   .option("--planner-model <model>", "model to use for sdk/api planner providers")
-  .action(async (options: { name: string; target?: string[]; manual?: boolean; plannerProvider?: string; plannerCommand?: string[]; plannerModel?: string }) => {
+  .action(async (options: { name: string; goal?: string; iterations?: string; target?: string[]; manual?: boolean; plannerProvider?: string; plannerCommand?: string[]; plannerModel?: string }) => {
     const root = await findRepoRoot();
     const smartevalConfig = await readSmartevalConfig(root);
     const provider = options.plannerProvider ?? smartevalConfig.defaults.planner?.provider;
     const plannerModel = options.plannerModel ?? smartevalConfig.defaults.planner?.model;
     const plannerCommand = options.plannerCommand ?? smartevalConfig.defaults.planner?.command;
+    const iterations = options.iterations ? Number.parseInt(options.iterations, 10) : undefined;
+    if (iterations !== undefined && (!Number.isInteger(iterations) || iterations < 1)) {
+      throw new Error("--iterations must be a positive integer.");
+    }
 
     if (!options.manual && !provider) {
       throw new Error(
@@ -188,7 +195,7 @@ program
     }
 
     if (options.manual) {
-      await writePlanArtifacts(root, manualPlannerOutput(options.name, options.target));
+      await writePlanArtifacts(root, manualPlannerOutput(options.name, options.target, options.goal, iterations ?? 1));
       console.log(`Created .smarteval/evals/${options.name}/`);
       return;
     }
@@ -200,6 +207,8 @@ program
       const output = await runCommandPlanner({
         root,
         name: options.name,
+        goal: options.goal,
+        iterations,
         providerCommand: plannerCommand,
         targetCommand: options.target
       });
@@ -217,6 +226,8 @@ program
       }).plan({
         root,
         name: options.name,
+        goal: options.goal,
+        iterations,
         targetCommand: options.target
       });
       await writePlanArtifacts(root, output);
@@ -233,6 +244,8 @@ program
       }).plan({
         root,
         name: options.name,
+        goal: options.goal,
+        iterations,
         targetCommand: options.target
       });
       await writePlanArtifacts(root, output);
@@ -254,6 +267,8 @@ program
       }).plan({
         root,
         name: options.name,
+        goal: options.goal,
+        iterations,
         targetCommand: options.target
       });
       await writePlanArtifacts(root, output);
@@ -267,6 +282,44 @@ program
     throw new Error(
       `Unsupported planner provider: ${provider}. Use command, codex_sdk, claude_agent_sdk, openrouter_api, or --manual.`
     );
+  });
+
+program
+  .command("agent-task")
+  .description("Write a coding-agent runbook for creating, running, and iterating an eval.")
+  .requiredOption("--name <name>", "eval name")
+  .requiredOption("--goal <text>", "plain-language behavior goal for the agent-led eval loop")
+  .option("--iterations <count>", "candidate iterations to request", "3")
+  .option("--provider <name>", "agent provider label: codex, claude, generic", "generic")
+  .option("--out <path>", "output markdown path")
+  .action(async (options: { name: string; goal: string; iterations: string; provider: string; out?: string }) => {
+    const root = await findRepoRoot();
+    const smartevalConfig = await readSmartevalConfig(root);
+    const iterations = Number.parseInt(options.iterations, 10);
+    if (!Number.isInteger(iterations) || iterations < 1) {
+      throw new Error("--iterations must be a positive integer.");
+    }
+    if (!["codex", "claude", "generic"].includes(options.provider)) {
+      throw new Error("--provider must be codex, claude, or generic.");
+    }
+
+    let evalConfig;
+    const evalPath = join(root, ".smarteval", "evals", options.name, "eval.yaml");
+    if (await pathExists(evalPath)) {
+      evalConfig = await readEvalConfig(evalPath);
+    }
+
+    const task = buildAgentTask({
+      name: options.name,
+      goal: options.goal,
+      iterations,
+      provider: options.provider as "codex" | "claude" | "generic",
+      evalConfig,
+      defaults: smartevalConfig.defaults
+    });
+    const outPath = options.out ?? join(".smarteval", "agent-tasks", `${options.name}.md`);
+    const written = await writeAgentTask(root, task, outPath);
+    console.log(`Wrote ${written}`);
   });
 
 program

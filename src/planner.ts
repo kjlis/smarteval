@@ -37,6 +37,8 @@ const optionalImport = (specifier: string): Promise<Record<string, unknown>> =>
 export interface PlannerRequest {
   root: string;
   name: string;
+  goal?: string;
+  iterations?: number;
   targetCommand?: string[];
 }
 
@@ -48,6 +50,8 @@ export interface PlannerProvider {
 export interface CommandPlannerOptions {
   root: string;
   name: string;
+  goal?: string;
+  iterations?: number;
   providerCommand: string[];
   targetCommand?: string[];
 }
@@ -123,23 +127,27 @@ function buildPlannerPrompt(request: PlannerRequest): string {
   return [
     "You are Smarteval's assisted planner for repo-local AI behavior evaluation.",
     "Analyze the repository context and propose a reviewable eval plan. Do not modify files.",
+    "The plan should help a coding agent build any missing command harness, identify behavior levers, run a baseline, iterate candidates, and pick the best validated candidate.",
     "Return only JSON with keys: eval, dataset, candidates, rubrics, questions.",
     "The eval must match Smarteval eval.yaml schema. Prefer deterministic scoring vectors before judge metrics.",
+    "Include allowed_levers for editable behavior knobs and fixed_constraints for product, safety, budget, and interface requirements.",
     "Keep generated candidates human-editable and include questions the engineer should confirm before running candidates.",
     `Eval name: ${request.name}`,
+    `Goal: ${request.goal ?? "Not specified"}`,
+    `Requested iterations: ${request.iterations ?? "Use eval budget defaults"}`,
     `Repository root: ${request.root}`,
     `Optional target command: ${JSON.stringify(request.targetCommand ?? null)}`
   ].join("\n\n");
 }
 
-export function manualPlannerOutput(name: string, targetCommand?: string[]): PlannerOutput {
+export function manualPlannerOutput(name: string, targetCommand?: string[], goal?: string, iterations = 1): PlannerOutput {
   const command = targetCommand?.length ? targetCommand : ["node", "scripts/eval-target.js"];
   return plannerOutputSchema.parse({
     eval: {
       schema_version: "1",
       name,
       objective: {
-        description: "Describe the AI behavior this eval should improve."
+        description: goal ?? "Describe the AI behavior this eval should improve."
       },
       target: {
         type: "command",
@@ -156,7 +164,7 @@ export function manualPlannerOutput(name: string, targetCommand?: string[]): Pla
         error_rate: { type: "error_rate", weight: 0.5 }
       },
       experiment_budget: {
-        iterations: 1,
+        iterations,
         candidates_per_iteration: 1,
         max_cost_usd: 0
       }
@@ -212,6 +220,8 @@ export async function runCommandPlanner(options: CommandPlannerOptions): Promise
     child.stdin.end(
       JSON.stringify({
         name: options.name,
+        goal: options.goal,
+        iterations: options.iterations,
         root: options.root,
         target_command: options.targetCommand
       })

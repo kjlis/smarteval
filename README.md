@@ -21,6 +21,7 @@ Command targets receive one dataset row as JSON on stdin and should print the ta
 ```text
 .smarteval/
   config.yaml
+  agent-tasks/
   evals/
     <eval_name>/
       eval.yaml
@@ -43,19 +44,20 @@ Command targets receive one dataset row as JSON on stdin and should print the ta
 - `smarteval review import` imports human image review ratings for a run.
 - `smarteval propose` creates human-editable candidate files.
 - `smarteval apply <candidate> --dry-run` prints a candidate without changing production code.
+- `smarteval agent-task` writes a coding-agent runbook for repo exploration, harness setup, baseline, iteration, comparison, and winner selection.
 - `smarteval doctor` checks the local setup.
 - `smarteval agent-pack install` copies Codex and Claude skill templates into a target repo.
 
 ## MVP scope
 
-This implementation supports command targets, JSONL datasets, deterministic evaluators, runtime metrics, baseline/candidate run artifacts, comparison, markdown reports, OpenRouter judges, command judges, optional Codex/Claude SDK judges, and agent-pack templates. Python and Node function targets are represented in schemas but should be wrapped with command targets until their adapters are implemented.
+This implementation supports command targets, JSONL datasets, deterministic evaluators, runtime metrics, baseline/candidate run artifacts, comparison, markdown reports, OpenRouter judges, command judges, optional Codex/Claude SDK judges, agent-led runbooks, and agent-pack templates. Python and Node function targets are represented in schemas but should be wrapped with command targets until their adapters are implemented.
 
 ## Planning modes
 
 `smarteval plan` does not silently create a generic scaffold. Planning is expected to be assisted by a repo-aware planner unless you opt into manual mode:
 
 ```bash
-smarteval plan --manual --name support_summary --target node scripts/eval-target.js
+smarteval plan --manual --name support_summary --goal "Improve support answer quality" --target node scripts/eval-target.js
 ```
 
 For assisted planning without native SDK coupling, use a command planner:
@@ -64,17 +66,41 @@ For assisted planning without native SDK coupling, use a command planner:
 smarteval plan --planner-provider command --planner-command node scripts/smarteval-planner.js
 ```
 
-The command planner receives JSON on stdin with the eval name, repo root, and optional target command. It must print JSON with `eval`, `dataset`, `candidates`, optional `rubrics`, and optional follow-up `questions`.
+The command planner receives JSON on stdin with the eval name, goal, requested iterations, repo root, and optional target command. It must print JSON with `eval`, `dataset`, `candidates`, optional `rubrics`, and optional follow-up `questions`.
 
 Native/API planner providers are also available:
 
 ```bash
-smarteval plan --planner-provider codex_sdk --planner-model gpt-5.3-codex
-smarteval plan --planner-provider claude_agent_sdk --planner-model claude-sonnet-4-5
-OPENROUTER_API_KEY=... smarteval plan --planner-provider openrouter_api --planner-model openai/gpt-5.4-mini
+smarteval plan --name support_summary --goal "Improve support answer quality" --iterations 5 --planner-provider codex_sdk --planner-model gpt-5.5
+smarteval plan --name support_summary --goal "Improve support answer quality" --iterations 5 --planner-provider claude_agent_sdk --planner-model claude-sonnet-4-5
+OPENROUTER_API_KEY=... smarteval plan --name support_summary --goal "Improve support answer quality" --iterations 5 --planner-provider openrouter_api --planner-model openai/gpt-5.4-mini
 ```
 
 Codex and Claude planner SDK packages are loaded only when those providers are used.
+
+## Agent-led loops
+
+Smarteval is intended to let Codex or Claude Code do most setup work: inspect the repo, identify levers and constraints, build a command harness when needed, create the eval, run the baseline, iterate candidates, compare runs, and recommend the best candidate.
+
+Generate a durable agent runbook:
+
+```bash
+smarteval agent-task \
+  --name story_generation \
+  --goal "Evaluate and improve generated bedtime stories" \
+  --iterations 5 \
+  --provider codex
+```
+
+This writes `.smarteval/agent-tasks/story_generation.md`. Give that file to Codex or Claude Code, or use the installed agent-pack skill. The runbook tells the agent to:
+
+- explore the target code path before editing behavior;
+- create or repair the command harness;
+- confirm target, dataset shape, allowed levers, fixed constraints, scoring vectors, judge provider, and budget;
+- run `smarteval validate` and a baseline;
+- edit only approved levers during candidate iterations;
+- compare each candidate against baseline and current best;
+- report regressions, latency, cost, safety, format adherence, dataset weakness, and judge limitations.
 
 ## Defaults
 

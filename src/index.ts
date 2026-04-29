@@ -7,3 +7,4 @@ export * from "./doctor.js";
 export * from "./planner.js";
 export * from "./image.js";
 export * from "./review.js";
+export * from "./agentTask.js";

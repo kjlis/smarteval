@@ -133,6 +133,34 @@ describe("fixture e2e", () => {
     expect(codexConfig).toContain("gpt-5.5");
   });
 
+  test("writes an agent-led eval runbook", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "smarteval-agent-task-e2e-"));
+
+    await expect(
+      runCli(workspace, [
+        "agent-task",
+        "--name",
+        "story_generation",
+        "--goal",
+        "Evaluate generated bedtime stories",
+        "--iterations",
+        "5",
+        "--provider",
+        "codex"
+      ])
+    ).resolves.toContain("Wrote");
+
+    const runbook = await readFile(
+      join(workspace, ".smarteval", "agent-tasks", "story_generation.md"),
+      "utf8"
+    );
+    expect(runbook).toContain("Smarteval Agent Task: story_generation");
+    expect(runbook).toContain("Evaluate generated bedtime stories");
+    expect(runbook).toContain("Iterations requested: 5");
+    expect(runbook).toContain("Build or repair the command harness");
+    expect(runbook).toContain("smarteval run --eval story_generation --baseline");
+  });
+
   test("validates, runs, and reports against the demo fixture", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "smarteval-fixture-e2e-"));
     const fixtureRoot = join(workspace, "demo");
@@ -279,6 +307,7 @@ describe("fixture e2e", () => {
     const codexSkill = await readFile(join(workspace, ".codex", "skills", "smarteval", "SKILL.md"), "utf8");
     const claudeSkill = await readFile(join(workspace, ".claude", "skills", "smarteval", "SKILL.md"), "utf8");
     const claudePlanCommand = await readFile(join(workspace, ".claude", "commands", "smarteval-plan.md"), "utf8");
+    const claudeIterateCommand = await readFile(join(workspace, ".claude", "commands", "smarteval-iterate.md"), "utf8");
     const imageRubric = await readFile(
       join(workspace, ".codex", "skills", "smarteval", "references", "image-judge-rubric-template.md"),
       "utf8"
@@ -287,6 +316,8 @@ describe("fixture e2e", () => {
     expect(codexSkill).toContain("Smarteval Workflow");
     expect(claudeSkill).toContain("Smarteval Workflow");
     expect(claudePlanCommand).toContain("smarteval plan");
+    expect(claudeIterateCommand).toContain("Smarteval Iterate");
+    expect(claudeIterateCommand).toContain("smarteval agent-task");
     expect(imageRubric).toContain("Image Judge Rubric Template");
   });
 });
